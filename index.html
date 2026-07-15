@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Almas Sombrias - RPG Filosófico Pixel Art</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Roboto+Condensed:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            font-family: 'Roboto Condensed', sans-serif;
+            overflow: hidden;
+            background: #000;
+            color: #fff;
+        }
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+        .ui-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .ui-overlay>* {
+            pointer-events: auto;
+        }
+        .hud {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            display: grid;
+            grid-template-columns: 320px 1fr 280px;
+            gap: 12px;
+            font-family: 'Cinzel', serif;
+            text-shadow: 0 2px 3px black;
+        }
+        @media (max-width: 900px) {
+            .hud {
+                grid-template-columns: 1fr;
+                gap: 8px;
+                top: 8px;
+                left: 8px;
+                right: 8px;
+            }
+        }
+        .hud-panel {
+            background: rgba(0, 0, 0, 0.78);
+            backdrop-filter: blur(6px);
+            border-radius: 18px;
+            padding: 10px 14px;
+            border: 2px solid #a88c4c;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+            image-rendering: crisp-edges;
+        }
+        .player-name {
+            font-size: 1.3rem;
+            font-weight: 900;
+            color: #f5e7a0;
+            margin-bottom: 6px;
+            display: flex;
+            gap: 8px;
+            align-items: baseline;
+            flex-wrap: wrap;
+        }
+        .stat-bar {
+            margin-bottom: 8px;
+        }
+        .stat-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.65rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #ddc;
+            margin-bottom: 2px;
+        }
+        .bar {
+            height: 12px;
+            background: #222;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid #aa8c54;
+        }
+        .bar-fill {
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 20px;
+        }
+        .hp-fill {
+            background: linear-gradient(90deg, #bd2f2f, #e65c4f);
+        }
+        .mp-fill {
+            background: linear-gradient(90deg, #2c6ebb, #4a9eff);
+        }
+        .xp-fill {
+            background: linear-gradient(90deg, #e0a82b, #f5c542);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            margin-top: 8px;
+            font-size: 0.7rem;
+        }
+        .stat-cell {
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+            padding: 3px 5px;
+            text-align: center;
+            font-weight: bold;
+            border-left: 2px solid #ffcc66;
+        }
+        .enemy-name {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: #ffaa88;
+            text-shadow: 0 0 5px #ff6644;
+            text-align: center;
+            margin-bottom: 4px;
+        }
+        .combo-counter {
+            margin-top: 6px;
+            font-size: 0.85rem;
+            display: inline-block;
+            background: #000000aa;
+            padding: 2px 10px;
+            border-radius: 30px;
+            color: #ffcc77;
+            font-weight: bold;
+        }
+        #timeIndicator {
+            font-size: 0.65rem;
+            background: #00000099;
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 20px;
+            margin-top: 4px;
+        }
+        .trophy-badge {
+            display: inline-block;
+            background: #d4af37;
+            color: #000;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin: 2px;
+            font-weight: bold;
+        }
+        .combat-ui {
+            position: absolute;
+            bottom: 20px;
+            left: 55%;
+            transform: translateX(-50%);
+            width: 85%;
+            max-width: 1000px;
+            z-index: 20;
+        }
+        .question-box {
+            background: rgba(0, 0, 0, 0.88);
+            backdrop-filter: blur(14px);
+            border-radius: 28px;
+            padding: 16px 20px;
+            border: 2px solid #d4aa44;
+            box-shadow: 0 8px 22px black;
+        }
+        .question-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 16px;
+            font-family: 'Cinzel';
+            color: #f5e2b0;
+        }
+        .answers {
+            display: grid;
+            gap: 10px;
+        }
+        .answer-btn {
+            background: #111c2c;
+            border: 2px solid #aa8c54;
+            padding: 10px 18px;
+            border-radius: 50px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: #f5efd0;
+            cursor: pointer;
+            transition: 0.2s;
+            text-align: left;
+        }
+        .answer-btn:hover {
+            transform: translateX(8px);
+            background: #2a4a6e;
+            border-color: #ffdd99;
+            box-shadow: 0 0 10px #ffbb33;
+        }
+        .answer-btn.correct {
+            background: #1f6e2e;
+            border-color: #aaffaa;
+            animation: pulseGreen 0.4s;
+        }
+        .answer-btn.wrong {
+            background: #a11f2f;
+            border-color: #ff8888;
+            animation: shake 0.4s;
+        }
+        @keyframes pulseGreen {
+            0% {
+                box-shadow: 0 0 0 0 #2ecc71;
+            }
+            100% {
+                box-shadow: 0 0 0 12px rgba(46, 204, 113, 0);
+            }
+        }
+        @keyframes shake {
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+            25% {
+                transform: translateX(-6px);
+            }
+            75% {
+                transform: translateX(6px);
+            }
+        }
+        .skills-bar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 14px;
+        }
+        .skill-btn {
+            background: #3d2a4e;
+            border: 1px solid #b88a5a;
+            padding: 7px 18px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            color: #fff0c0;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: 'Cinzel';
+        }
+        .skill-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            background: #734c8c;
+            box-shadow: 0 5px 12px black;
+        }
+        .skill-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .menu-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, #0a0518, #000000);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .menu-content {
+            text-align: center;
+            max-width: 820px;
+            padding: 28px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 50px;
+            border: 2px solid #c9a03d;
+        }
+        .game-title {
+            font-size: 3.8rem;
+            font-family: 'Cinzel';
+            font-weight: 900;
+            background: linear-gradient(135deg, #FFD966, #FF9F4A);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 20px rgba(255, 200, 0, 0.6);
+        }
+        .btn {
+            background: linear-gradient(145deg, #2a2542, #16122b);
+            border: 2px solid #d4af37;
+            color: #ffefcf;
+            padding: 10px 36px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            margin: 10px;
+            font-family: 'Cinzel';
+            transition: 0.2s;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+            background: #3d3670;
+            box-shadow: 0 0 16px #eebb55;
+        }
+        .btn-small {
+            padding: 6px 16px;
+            font-size: 0.8rem;
+            margin: 4px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.88);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: #1c1736;
+            max-width: 600px;
+            width: 90%;
+            border-radius: 40px;
+            padding: 26px;
+            border: 3px solid #e8b45a;
+            text-align: center;
+            animation: fadeUp 0.3s;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        .modal-title {
+            font-size: 1.8rem;
+            font-family: 'Cinzel';
+            margin-bottom: 12px;
+            color: #ffd58c;
+        }
+        .floating-text {
+            position: fixed;
+            font-size: 2.5rem;
+            font-weight: 900;
+            z-index: 3000;
+            pointer-events: none;
+            animation: floatHit 1s forwards;
+            text-shadow: 0 0 12px;
+        }
+        .damage {
+            color: #ff5e5e;
+        }
+        .heal {
+            color: #5eff6e;
+        }
+        .critical {
+            color: #ffcc44;
+            font-size: 3.5rem;
+        }
+        @keyframes floatHit {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(0.7);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-90px) scale(1.2);
+            }
+        }
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 5000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .hidden {
+            display: none;
+        }
+        .spinner {
+            width: 55px;
+            height: 55px;
+            border: 5px solid #eebb5540;
+            border-top: 5px solid #d4af37;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin: 10px 0;
+        }
+        .inv-slot {
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #aa8c54;
+            border-radius: 16px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: 0.2s;
+            min-height: 70px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .inv-slot:hover {
+            border-color: #ffdd99;
+            box-shadow: 0 0 10px #ffbb33;
+        }
+        .inv-slot.equipped {
+            border-color: #ffcc44;
+            background: rgba(60, 40, 20, 0.8);
+            box-shadow: 0 0 8px #ffaa00;
+        }
+        .inv-slot.empty {
+            color: #888;
+            font-style: italic;
+        }
+        .item-rarity-common {
+            color: #ccc;
+        }
+        .item-rarity-rare {
+            color: #5ea3ff;
+        }
+        .item-rarity-epic {
+            color: #c44dff;
+        }
+        .item-rarity-legendary {
+            color: #ffaa00;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <div class="loading" id="loading"><div class="spinner"></div></div>
+
+    <div class="menu-screen" id="menuScreen">
+        <div class="menu-content">
+            <h1 class="game-title"> Almas Sombrias </h1>
+            <p style="font-size:1.2rem; margin-bottom:25px; color:#dcc27a;">RPG Filosófico • Pixel Art</p>
+            <button class="btn" id="startBtn"> INICIAR JORNADA</button>
+            <button class="btn" id="storyBtn"> SABEDORIA</button>
+            <button class="btn" id="philosophyStoryBtn">📜 HISTÓRIA FILOSÓFICA</button>
+        </div>
+    </div>
+
+    <div class="ui-overlay" id="uiOverlay" style="display:none;">
+        <div class="hud">
+            <div class="hud-panel">
+                <div class="player-name"><span id="playerName">Sábio</span> <span id="playerLevel" style="font-size:0.85rem;">Nv.1</span></div>
+                <div class="stat-bar"><div class="stat-label"><span> VIDA</span><span id="hpText">100/100</span></div><div class="bar"><div id="hpBar" class="bar-fill hp-fill"></div></div></div>
+                <div class="stat-bar"><div class="stat-label"><span> MANA</span><span id="mpText">50/50</span></div><div class="bar"><div id="mpBar" class="bar-fill mp-fill"></div></div></div>
+                <div class="stat-bar"><div class="stat-label"><span> XP</span><span id="xpText">0/100</span></div><div class="bar"><div id="xpBar" class="bar-fill xp-fill"></div></div></div>
+                <div class="stats-grid"><div class="stat-cell">⚔️ATK <span id="attack">10</span></div><div class="stat-cell">🛡️DEF <span id="defense">5</span></div><div class="stat-cell">🍀SORTE <span id="luck">10</span>%</div><div class="stat-cell">💰OURO <span id="gold">150</span></div><div class="stat-cell">🏆VITÓRIAS <span id="victories">0</span></div><div class="stat-cell">📚SABEDORIA <span id="wisdom">0</span></div></div>
+                <div style="margin-top:6px;font-size:0.7rem;">🏅Troféus: <span id="trophyCount">0</span></div>
+                <button class="btn btn-small" onclick="openInventory()" style="margin-top:4px;">🎒 INVENTÁRIO</button>
+            </div>
+            <div class="hud-panel enemy-card">
+                <div class="enemy-name" id="enemyName">???</div>
+                <div class="stat-bar"><div class="stat-label"><span> VIDA</span><span id="enemyHpText">0/0</span></div><div class="bar"><div id="enemyHpBar" class="bar-fill hp-fill"></div></div></div>
+                <div class="combo-counter">🔥 COMBO: <span id="comboValue">0</span>x</div>
+                <div id="timeIndicator">☀️ Dia</div>
+                <div style="font-size:0.65rem;margin-top:4px;color:#ffaa88;" id="enemyTypeTag"></div>
+            </div>
+            <div class="hud-panel">
+                <div style="font-weight:bold;margin-bottom:6px;">📜 LORE</div><div id="storyLore" style="font-size:0.7rem;">"Conhece-te a ti mesmo - cada batalha ensina uma lição."</div>
+                <div style="margin-top:8px;font-size:0.65rem;color:#d4af37;" id="trophyDisplay"></div>
+            </div>
+        </div>
+        <div class="combat-ui" id="combatUI" style="display:none;">
+            <div class="question-box"><div class="question-text" id="questionText">Carregando...</div><div class="answers" id="answersBox"></div></div>
+            <div class="skills-bar" id="skillsPanel"></div>
+        </div>
+    </div>
+    <div id="modal" class="modal"><div class="modal-content"><h2 class="modal-title" id="modalTitle"></h2><p class="modal-text" id="modalText"></p><button class="btn" id="modalBtn">Continuar</button></div></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // ========== ÁUDIO ==========
+        const AudioFX = {
+            ctx: null,
+            init() { this.ctx = new(window.AudioContext || webkitAudioContext)(); },
+            play(type) {
+                if (!this.ctx) this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                let freq = 300,
+                    dur = 0.15,
+                    wave = 'sine';
+                if (type === 'hit') { freq = 160;
+                    wave = 'sawtooth';
+                    dur = 0.2; }
+                if (type === 'correct') { freq = 660;
+                    dur = 0.35; }
+                if (type === 'wrong') { freq = 190;
+                    wave = 'square';
+                    dur = 0.25; }
+                if (type === 'level') { freq = 920;
+                    dur = 0.55; }
+                if (type === 'skill') { freq = 750;
+                    wave = 'triangle';
+                    dur = 0.3; }
+                if (type === 'drop') { freq = 1100;
+                    dur = 0.4; }
+                osc.type = wave;
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + dur);
+                osc.start();
+                osc.stop(this.ctx.currentTime + dur);
+            }
+        };
+
+        // ========== BANCO DE PERGUNTAS ==========
+        const QUESTIONS = [
+            { q: "O que significa 'Maiêutica'?", a: ["Parto das ideias (Sócrates)", "Teoria das Formas", "Método científico", "Lógica formal"], c: 0, exp: "Sócrates fazia perguntas para 'dar à luz' o conhecimento." },
+            { q: "Quem escreveu 'A República' e a Alegoria da Caverna?", a: ["Platão", "Aristóteles", "Sócrates", "Cícero"], c: 0, exp: "Platão mostra o caminho da ignorância à verdade." },
+            { q: "Imperativo Categórico de Kant?", a: ["Aja como lei universal", "Busca pela felicidade", "Vontade divina", "Dúvida metódica"], c: 0, exp: "Age de tal modo que tua ação possa tornar-se lei universal." },
+            { q: "Para Nietzsche, o Super-Homem é:", a: ["Criador de valores", "Ditador", "Herói mítico", "Iluminado"], c: 0, exp: "Transcende a moral escrava e cria novos valores." },
+            { q: "Contrato Social de Rousseau:", a: ["Vontade geral", "Estado de natureza", "Leviatã", "Monarquia absoluta"], c: 0, exp: "A soberania pertence ao povo unido em contrato social." },
+            { q: "Dúvida Metódica de Descartes busca:", a: ["Verdade indubitável", "Ceticismo radical", "Relativismo", "Empirismo puro"], c: 0, exp: "'Penso, logo existo' é a base." },
+            { q: "O que é a 'Dialética' para Hegel?", a: ["Tese, antítese, síntese", "Argumentação retórica", "Método indutivo", "Contradição estática"], c: 0, exp: "Movimento do espírito através da contradição." },
+            { q: "Quem é o pai do Existencialismo moderno?", a: ["Kierkegaard", "Sartre", "Heidegger", "Camus"], c: 0, exp: "Kierkegaard fundou o existencialismo com sua angústia da escolha." },
+            { q: "O 'Útil' para o Utilitarismo de Bentham:", a: ["Maior felicidade geral", "Dever moral", "Virtude", "Contemplação"], c: 0, exp: "A ação correta maximiza a felicidade do maior número." },
+            { q: "A 'Vontade de Potência' em Nietzsche:", a: ["Força criadora da vida", "Desejo de poder político", "Dominação bélica", "Ascetismo"], c: 0, exp: "É a força vital que impulsiona a superação." },
+        ];
+
+        // ========== CLASSES ==========
+        const CLASSES = [
+            { id: "stoic", name: " ESTOICO", stats: { hp: 140, mp: 45, atk: 12, def: 13, luck: 12 }, color: 0x5a8fbc, skills: [{ name: "Ataraxia", cost: 18, effect: "heal", power: 55 }, { name: "Muralha Estoica", cost: 22, effect: "defense", power: 14 }] },
+            { id: "dialectic", name: " DIALÉTICO", stats: { hp: 105, mp: 80, atk: 18, def: 6, luck: 16 }, color: 0xb87bcb, skills: [{ name: "Síntese", cost: 28, effect: "damage", power: 70 }, { name: "Tese/Antítese", cost: 32, effect: "multi", power: 38 }] },
+            { id: "existentialist", name: " EXISTENCIALISTA", stats: { hp: 118, mp: 70, atk: 16, def: 8, luck: 22 }, color: 0xe89b3e, skills: [{ name: "Angústia Criativa", cost: 30, effect: "critical", power: 100 }, { name: "Liberdade Radical", cost: 25, effect: "heal", power: 50 }] },
+        ];
+
+        const ITEMS = [];
+        const ENEMIES = [
+            { name: "Sofista", hp: 70, atk: 12, color: 0xc44545, xp: 45, gold: 35, lore: "Retórica vazia engana os tolos." },
+            { name: "Cético Radical", hp: 90, atk: 15, color: 0x4aa3c2, xp: 70, gold: 50, lore: "Duvida até da própria dúvida." },
+            { name: "Dogmático", hp: 110, atk: 18, color: 0xe67e22, xp: 95, gold: 70, lore: "Cego por verdades absolutas." },
+        ];
+        const BOSSES = [
+            { name: "PLATÃO, MESTRE DAS IDEIAS", hp: 320, atk: 26, color: 0xd4af37, xp: 450, gold: 400, isBoss: true, lore: "Liberte-se da caverna!" },
+            { name: "NIETZSCHE, O ABISMO", hp: 480, atk: 34, color: 0xe74c3c, xp: 800, gold: 700, isBoss: true, lore: "Se encarar o abismo, ele te encara." },
+        ];
+        const TROPHIES = {};
+
+        let game = {
+            player: null,
+            enemy: null,
+            scene: null,
+            camera: null,
+            renderer: null,
+            playerModel: null,
+            enemyModel: null,
+            sunLight: null,
+            ambientLight: null,
+            clouds: [],
+            playerBaseScale: 1.0,
+            enemyBaseScale: 1.0,
+        };
+
+        // ========== CRIAÇÃO DE PERSONAGENS ==========
+        function createPixelCharacter(colorHex, posX, posY = 1.4) {
+            const group = new THREE.Group();
+            const canvas = document.createElement('canvas');
+            canvas.width = 64;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = false;
+            ctx.fillStyle = '#' + colorHex.toString(16).padStart(6, '0');
+            ctx.fillRect(8, 24, 48, 32);
+            ctx.fillStyle = '#b87c4f';
+            ctx.fillRect(20, 16, 24, 16);
+            ctx.fillStyle = '#f0c0a0';
+            ctx.fillRect(24, 8, 16, 16);
+            ctx.fillStyle = '#2c2c2c';
+            ctx.fillRect(28, 12, 4, 4);
+            ctx.fillRect(36, 12, 4, 4);
+            ctx.fillStyle = '#ffaa66';
+            ctx.fillRect(30, 20, 8, 4);
+            ctx.fillStyle = '#aa8844';
+            ctx.fillRect(8, 40, 48, 12);
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.magFilter = THREE.NearestFilter;
+            const material = new THREE.MeshStandardMaterial({ map: texture, emissive: 0x442200, emissiveIntensity: 0.2 });
+            const plane = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.6), material);
+            plane.castShadow = true;
+            group.add(plane);
+            group.position.set(posX, posY, 0);
+            group.userData = { floatOffset: Math.random() * Math.PI * 2 };
+            return group;
+        }
+
+        // ========== MUNDO 3D ==========
+        function initWorld() {
+            const container = document.getElementById('canvas-container');
+            game.scene = new THREE.Scene();
+            game.scene.background = new THREE.Color(0x0a1a3a);
+            game.scene.fog = new THREE.FogExp2(0x0a1a3a, 0.008);
+            game.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 500);
+            game.camera.position.set(0, 4.2, 12);
+            game.camera.lookAt(0, 1.8, 0);
+            game.renderer = new THREE.WebGLRenderer({ antialias: true });
+            game.renderer.setSize(window.innerWidth, window.innerHeight);
+            game.renderer.shadowMap.enabled = true;
+            container.appendChild(game.renderer.domElement);
+
+            game.ambientLight = new THREE.AmbientLight(0x404060, 0.6);
+            game.scene.add(game.ambientLight);
+            game.sunLight = new THREE.DirectionalLight(0xffeedd, 1.2);
+            game.sunLight.position.set(10, 18, 4);
+            game.sunLight.castShadow = true;
+            game.scene.add(game.sunLight);
+
+            const geometry = new THREE.PlaneGeometry(80, 80, 120, 120);
+            geometry.rotateX(-Math.PI / 2);
+            const positions = geometry.attributes.position.array;
+            for (let i = 0; i < positions.length; i += 3) {
+                let x = positions[i],
+                    z = positions[i + 2];
+                let y = Math.sin(x * 0.2) * 0.4 + Math.cos(z * 0.2) * 0.4;
+                if (Math.abs(x) < 6 && Math.abs(z) < 6) y = 0.2;
+                positions[i + 1] = y;
+            }
+            geometry.computeVertexNormals();
+            const ground = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: 0x5d7645, roughness: 0.8 }));
+            ground.receiveShadow = true;
+            game.scene.add(ground);
+
+            const cloudMat = new THREE.MeshStandardMaterial({ color: 0xeef4ff, emissive: 0x88aaff, transparent: true });
+            game.clouds = [];
+            for (let i = 0; i < 30; i++) {
+                let cloud = new THREE.Group();
+                for (let p = 0; p < 4; p++) {
+                    let part = new THREE.Mesh(new THREE.SphereGeometry(0.4, 5, 5), cloudMat);
+                    part.scale.set(0.8 + Math.random() * 0.6, 0.5, 0.7);
+                    part.position.set((Math.random() - 0.5) * 1.2, (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 1);
+                    cloud.add(part);
+                }
+                cloud.position.set((Math.random() - 0.5) * 45, 7 + Math.random() * 5, (Math.random() - 0.5) * 35);
+                cloud.userData = { speed: 0.008 + Math.random() * 0.01 };
+                game.scene.add(cloud);
+                game.clouds.push(cloud);
+            }
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            let time = Date.now() * 0.000026;
+            let angle = (time % (Math.PI * 2));
+            if (game.sunLight) {
+                let intensity = Math.max(0.2, (Math.sin(angle) + 1) / 1.6);
+                game.sunLight.intensity = intensity;
+                game.ambientLight.intensity = 0.25 + intensity * 0.4;
+                game.sunLight.position.x = Math.cos(angle) * 16;
+                game.sunLight.position.y = Math.sin(angle) * 10 + 6;
+                let skyLight = 0.08 + intensity * 0.23;
+                game.scene.background = new THREE.Color().setHSL(0.55, 0.6, skyLight);
+                document.getElementById('timeIndicator').innerHTML = intensity > 0.7 ? '☀️ DIA' : (intensity > 0.4 ? '🌅 ENTARDECER' : '🌙 NOITE');
+            }
+            game.clouds.forEach(c => { c.position.x += c.userData.speed; if (c.position.x > 50) c.position.x = -50; });
+            if (game.playerModel) game.playerModel.position.y = 1.4 + Math.sin(Date.now() * 0.003) * 0.06;
+            if (game.enemyModel) game.enemyModel.position.y = 1.4 + Math.sin(Date.now() * 0.003 + 2) * 0.07;
+            game.camera.position.x += (0 - game.camera.position.x) * 0.04;
+            game.camera.lookAt(0, 1.6, 0);
+            game.renderer.render(game.scene, game.camera);
+        }
+
+        // ========== INVENTÁRIO ==========
+        function openInventory() {
+            document.getElementById('modalTitle').innerHTML = '🎒 INVENTÁRIO';
+            document.getElementById('modalText').innerHTML = '<p>Inventário em desenvolvimento.</p>';
+            document.getElementById('modal').classList.add('active');
+            document.getElementById('modalBtn').onclick = () => document.getElementById('modal').classList.remove('active');
+        }
+
+        // ========== GAMEPLAY ==========
+        function startNewGame(selectedClass) {
+            let cls = CLASSES.find(c => c.id === selectedClass);
+            game.player = {
+                name: cls.name,
+                maxHp: cls.stats.hp,
+                hp: cls.stats.hp,
+                maxMp: cls.stats.mp,
+                mp: cls.stats.mp,
+                atk: cls.stats.atk,
+                def: cls.stats.def,
+                luck: cls.stats.luck,
+                skills: cls.skills,
+                level: 1,
+                xp: 0,
+                xpToNext: 100,
+                gold: 150,
+                victories: 0,
+                wisdom: 0,
+                combo: 0,
+                trophies: [],
+            };
+            game.playerBaseScale = 1.0;
+            game.enemyBaseScale = 1.0;
+            updateUI();
+            document.getElementById('menuScreen').style.display = 'none';
+            document.getElementById('uiOverlay').style.display = 'block';
+            if (!game.scene) initWorld();
+            if (game.playerModel) game.scene.remove(game.playerModel);
+            game.playerModel = createPixelCharacter(cls.color, -2.8);
+            game.scene.add(game.playerModel);
+            startBattle();
+        }
+
+        function startBattle() {
+            let enemyData;
+            if (game.player.victories === 5 || game.player.victories === 10) {
+                enemyData = JSON.parse(JSON.stringify(BOSSES[game.player.victories === 5 ? 0 : 1]));
+            } else {
+                enemyData = JSON.parse(JSON.stringify(ENEMIES[Math.floor(Math.random() * ENEMIES.length)]));
+            }
+            enemyData.maxHp = enemyData.hp;
+            enemyData.isBoss = enemyData.isBoss || false;
+            game.enemy = enemyData;
+            document.getElementById('enemyTypeTag').innerHTML = game.enemy.isBoss ? '👑 BOSS' : '';
+            game.player.combo = 0;
+            game.playerBaseScale = game.playerModel ? game.playerModel.scale.x : 1.0;
+            game.enemyBaseScale = 1.0;
+            if (game.playerModel) game.playerModel.scale.set(1, 1, 1);
+            if (game.enemyModel) game.scene.remove(game.enemyModel);
+            game.enemyModel = createPixelCharacter(game.enemy.color, 2.8);
+            game.enemyModel.scale.set(1, 1, 1);
+            game.scene.add(game.enemyModel);
+            updateEnemyUI();
+            askQuestion();
+            renderSkills();
+            document.getElementById('combatUI').style.display = 'block';
+        }
+
+        function askQuestion() {
+            let q = QUESTIONS[Math.floor(Math.random() * QUESTIONS.length)];
+            document.getElementById('questionText').innerHTML = q.q;
+            document.getElementById('answersBox').innerHTML = q.a.map((ans, i) =>
+                `<button class="answer-btn" onclick="checkAnswer(${i},${q.c},'${q.exp.replace(/'/g, "\\'")}')">${ans}</button>`
+            ).join('');
+        }
+
+        window.checkAnswer = function(selected, correct, explanation) {
+            let btns = document.querySelectorAll('.answer-btn');
+            btns.forEach((b, i) => { b.disabled = true; if (i === correct) b.classList.add('correct'); if (i === selected && i !== correct) b.classList.add('wrong'); });
+            let isCorrect = (selected === correct) || (Math.random() * 100 < game.player.luck);
+            if (isCorrect) {
+                AudioFX.play('correct');
+                game.player.combo++;
+                let dmg = Math.floor(game.player.atk + game.player.combo * 3 + Math.random() * 14);
+                game.enemy.hp -= dmg;
+                showFloatingText(`-${dmg}`, 'damage');
+                game.player.wisdom += 5;
+                if (game.playerModel) {
+                    let newScale = Math.min(1.5, game.playerBaseScale + game.player.combo * 0.03);
+                    game.playerModel.scale.set(newScale, newScale, newScale);
+                }
+                if (game.enemyModel) {
+                    let newScale = Math.max(0.5, game.enemyBaseScale - game.player.combo * 0.04);
+                    game.enemyModel.scale.set(newScale, newScale, newScale);
+                }
+                document.getElementById('wisdom').innerText = game.player.wisdom;
+                showModal("📖 ENSINAMENTO", explanation, () => {});
+                updateEnemyUI();
+                if (game.enemy.hp <= 0) setTimeout(() => victory(), 800);
+                else setTimeout(() => enemyTurn(), 1100);
+            } else {
+                AudioFX.play('wrong');
+                game.player.combo = 0;
+                if (game.playerModel) game.playerModel.scale.set(game.playerBaseScale, game.playerBaseScale, game.playerBaseScale);
+                if (game.enemyModel) game.enemyModel.scale.set(game.enemyBaseScale, game.enemyBaseScale, game.enemyBaseScale);
+                showFloatingText("ERRO!", 'damage');
+                enemyTurn();
+            }
+            updateComboUI();
+        };
+
+        function enemyTurn() {
+            let dmg = Math.max(1, game.enemy.atk - game.player.def + Math.floor(Math.random() * 10) - 4);
+            if (game.enemy.isBoss) dmg = Math.floor(dmg * 1.5);
+            game.player.hp -= dmg;
+            AudioFX.play('hit');
+            showFloatingText(`-${dmg}`, 'damage');
+            updateUI();
+            if (game.player.hp <= 0) gameOver();
+            else setTimeout(() => askQuestion(), 1200);
+        }
+
+        function useSkill(idx) {
+            let skill = game.player.skills[idx];
+            if (game.player.mp < skill.cost) return;
+            game.player.mp -= skill.cost;
+            AudioFX.play('skill');
+            if (skill.effect === 'heal') { game.player.hp = Math.min(game.player.maxHp, game.player.hp + skill.power);
+                showFloatingText(`+${skill.power}`, 'heal'); } else if (skill.effect === 'damage') { game.enemy.hp -= skill.power;
+                showFloatingText(`-${skill.power}`, 'critical'); } else if (skill.effect === 'defense') { game.player.def += skill.power;
+                showFloatingText(`DEF+${skill.power}`, 'heal'); } else if (skill.effect === 'critical') { let big = skill.power + Math.floor(Math.random() * 50);
+                game.enemy.hp -= big;
+                showFloatingText(`${big}`, 'critical'); } else if (skill.effect === 'multi') { for (let i = 0; i < 2; i++) setTimeout(() => { game.enemy.hp -= skill.power;
+                    showFloatingText(`-${skill.power}`, 'damage');
+                    updateEnemyUI(); }, i * 400); }
+            updateUI();
+            updateEnemyUI();
+            if (game.enemy.hp <= 0) setTimeout(() => victory(), 800);
+            else setTimeout(() => enemyTurn(), 1400);
+            renderSkills();
+        }
+
+        function victory() {
+            game.player.xp += game.enemy.xp;
+            game.player.gold += game.enemy.gold;
+            game.player.victories++;
+            game.player.combo = 0;
+            AudioFX.play('level');
+            game.player.wisdom += 12;
+            game.playerBaseScale = 1.0;
+            game.enemyBaseScale = 1.0;
+            if (game.playerModel) game.playerModel.scale.set(1, 1, 1);
+            if (game.enemyModel) game.scene.remove(game.enemyModel);
+            showModal("🏆 VITÓRIA!", `Derrotou ${game.enemy.name}! +${game.enemy.xp} XP, +${game.enemy.gold} Ouro.<br>"${game.enemy.lore}"`, () => {
+                checkLevelUp();
+                game.player.hp = Math.min(game.player.maxHp, game.player.hp + 40);
+                game.player.mp = Math.min(game.player.maxMp, game.player.mp + 25);
+                updateUI();
+                startBattle();
+            });
+            updateUI();
+        }
+
+        function checkLevelUp() {
+            while (game.player.xp >= game.player.xpToNext) {
+                game.player.level++;
+                game.player.xp -= game.player.xpToNext;
+                game.player.xpToNext = Math.floor(game.player.xpToNext * 1.5);
+                game.player.maxHp += 25;
+                game.player.maxMp += 12;
+                game.player.atk += 4;
+                game.player.def += 3;
+                game.player.luck += 2;
+                AudioFX.play('level');
+                showFloatingText("⬆ LEVEL UP! ", 'heal');
+            }
+            game.player.hp = Math.min(game.player.maxHp, game.player.hp + 30);
+            game.player.mp = Math.min(game.player.maxMp, game.player.mp + 20);
+        }
+
+        function gameOver() {
+            showModal("💀 FIM", `Jornada interrompida no nível ${game.player.level}.<br>Vitórias: ${game.player.victories}`, () => location.reload());
+        }
+
+        function updateUI() {
+            document.getElementById('playerName').innerHTML = game.player.name;
+            document.getElementById('playerLevel').innerHTML = `Nv.${game.player.level}`;
+            document.getElementById('hpText').innerHTML = `${Math.floor(game.player.hp)}/${game.player.maxHp}`;
+            document.getElementById('mpText').innerHTML = `${Math.floor(game.player.mp)}/${game.player.maxMp}`;
+            document.getElementById('xpText').innerHTML = `${game.player.xp}/${game.player.xpToNext}`;
+            document.getElementById('attack').innerHTML = game.player.atk;
+            document.getElementById('defense').innerHTML = game.player.def;
+            document.getElementById('luck').innerHTML = game.player.luck;
+            document.getElementById('gold').innerHTML = game.player.gold;
+            document.getElementById('victories').innerHTML = game.player.victories;
+            document.getElementById('wisdom').innerHTML = game.player.wisdom;
+            document.getElementById('hpBar').style.width = (game.player.hp / game.player.maxHp * 100) + '%';
+            document.getElementById('mpBar').style.width = (game.player.mp / game.player.maxMp * 100) + '%';
+            document.getElementById('xpBar').style.width = (game.player.xp / game.player.xpToNext * 100) + '%';
+        }
+
+        function updateEnemyUI() {
+            if (game.enemy) {
+                document.getElementById('enemyName').innerHTML = game.enemy.name;
+                document.getElementById('enemyHpText').innerHTML = `${Math.max(0,Math.floor(game.enemy.hp))}/${game.enemy.maxHp}`;
+                document.getElementById('enemyHpBar').style.width = (game.enemy.hp / game.enemy.maxHp * 100) + '%';
+            }
+        }
+
+        function updateComboUI() { document.getElementById('comboValue').innerHTML = game.player.combo; }
+
+        function renderSkills() {
+            document.getElementById('skillsPanel').innerHTML = game.player.skills.map((s, i) =>
+                `<button class="skill-btn" onclick="useSkill(${i})" ${game.player.mp < s.cost ? 'disabled' : ''}>${s.name} (${s.cost}💙)</button>`
+            ).join('');
+        }
+
+        function showFloatingText(txt, type) {
+            let div = document.createElement('div');
+            div.className = `floating-text ${type}`;
+            div.innerText = txt;
+            div.style.left = window.innerWidth / 2 - 70 + 'px';
+            div.style.top = window.innerHeight / 2 - 40 + 'px';
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 1100);
+        }
+
+        function showModal(title, text, cb) {
+            let modal = document.getElementById('modal');
+            document.getElementById('modalTitle').innerHTML = title;
+            document.getElementById('modalText').innerHTML = text;
+            modal.classList.add('active');
+            document.getElementById('modalBtn').onclick = () => { modal.classList.remove('active');
+                cb(); };
+        }
+
+        // ========== HISTÓRIA FILOSÓFICA (NOVA FUNCIONALIDADE) ==========
+        const PHILOSOPHY_STORIES = [
+            {
+                philosopher: "Sócrates",
+                intro: "Você encontra Sócrates na ágora de Atenas. Ele questiona:",
+                questions: [
+                    { q: "O que é a virtude?", opts: ["Conhecimento", "Poder", "Riqueza", "Beleza"], c: 0, feedback: "Para Sócrates, a virtude é conhecimento." },
+                    { q: "Qual o método socrático?", opts: ["Maiêutica", "Dedução", "Indução", "Experimento"], c: 0, feedback: "A maiêutica é o parto das ideias." },
+                    { q: "Por que Sócrates dizia 'só sei que nada sei'?", opts: ["Reconhecimento da ignorância", "Modéstia", "Ceticismo radical", "Ironia"], c: 0, feedback: "É o primeiro passo para a sabedoria." }
+                ]
+            },
+            {
+                philosopher: "Platão",
+                intro: "Platão o convida para sua Academia:",
+                questions: [
+                    { q: "O que é o Mundo das Ideias?", opts: ["Realidade perfeita e eterna", "Mundo físico", "Sonho coletivo", "Ilusão"], c: 0, feedback: "As Ideias são a verdadeira realidade." },
+                    { q: "O que simboliza a caverna na Alegoria?", opts: ["A ignorância", "O conforto", "A natureza", "A arte"], c: 0, feedback: "A caverna representa a prisão da ignorância." },
+                    { q: "Quem deve governar na cidade ideal de Platão?", opts: ["O rei-filósofo", "Os militares", "Os ricos", "Os sacerdotes"], c: 0, feedback: "Apenas quem contempla o Bem pode governar." }
+                ]
+            },
+            {
+                philosopher: "Aristóteles",
+                intro: "Aristóteles caminha pelo Liceu e reflete:",
+                questions: [
+                    { q: "O que é eudaimonia?", opts: ["Felicidade pela virtude", "Prazer", "Riqueza", "Poder"], c: 0, feedback: "É a felicidade plena alcançada pela vida virtuosa." },
+                    { q: "Qual a teoria do meio-termo?", opts: ["Virtude entre excessos", "Extremismo", "Nada em excesso", "Tudo é permitido"], c: 0, feedback: "A virtude é o equilíbrio entre dois vícios." },
+                    { q: "Para Aristóteles, o homem é um animal...", opts: ["Político", "Racional", "Social", "Livre"], c: 0, feedback: "O homem é um animal político (zoon politikon)." }
+                ]
+            },
+            {
+                philosopher: "Nietzsche",
+                intro: "Das montanhas, Nietzsche proclama:",
+                questions: [
+                    { q: "O que é o Super-Homem?", opts: ["Criador de valores", "Ditador", "Herói mítico", "Deus"], c: 0, feedback: "Aquele que supera a moral tradicional e cria novos valores." },
+                    { q: "O que significa 'Deus está morto'?", opts: ["Fim dos valores absolutos", "Ateísmo", "Morte literal", "Niilismo passivo"], c: 0, feedback: "As certezas metafísicas perderam o fundamento." },
+                    { q: "Qual o conceito do amor fati?", opts: ["Amar o destino", "Amor à vida", "Amor próprio", "Amor ao próximo"], c: 0, feedback: "Amar o destino, inclusive o sofrimento, como parte da vida." }
+                ]
+            },
+            {
+                philosopher: "Kant",
+                intro: "Kant, em seu gabinete, expõe sua filosofia crítica:",
+                questions: [
+                    { q: "Qual o centro da ética kantiana?", opts: ["Imperativo categórico", "Utilidade", "Virtude", "Emoção"], c: 0, feedback: "Age de tal modo que a máxima da tua ação possa se tornar lei universal." },
+                    { q: "O que é 'razão pura'?", opts: ["Conhecimento a priori", "Experiência sensível", "Intuição", "Fé"], c: 0, feedback: "Conhecimento independente da experiência." },
+                    { q: "O que Kant entende por 'liberdade'?", opts: ["Agir conforme a lei moral", "Fazer o que quiser", "Seguir os instintos", "Obedecer à natureza"], c: 0, feedback: "A verdadeira liberdade é agir de acordo com a razão prática." }
+                ]
+            },
+            {
+                philosopher: "Descartes",
+                intro: "Descartes, em sua busca pela certeza, questiona:",
+                questions: [
+                    { q: "Qual a primeira certeza de Descartes?", opts: ["Penso, logo existo", "Deus existe", "O mundo é real", "Os sentidos não enganam"], c: 0, feedback: "O Cogito é a primeira verdade indubitável." },
+                    { q: "O que é o 'gênio maligno'?", opts: ["Uma hipótese de engano total", "Um demônio real", "Uma metáfora", "Um argumento religioso"], c: 0, feedback: "É uma dúvida hiperbólica para levar ao extremo o ceticismo." }
+                ]
+            }
+        ];
+
+        let currentPhilosophyStory = null;
+        let currentPhilosophyQuestionIdx = 0;
+
+        function startPhilosophyStory() {
+            const html = '<div style="text-align:left;font-size:0.9rem;"><h3 style="text-align:center;color:#ffd58c;">📜 HISTÓRIA FILOSÓFICA</h3>';
+            html += '<p style="text-align:center;font-size:0.8rem;">Escolha um filósofo para estudar:</p>';
+            PHILOSOPHY_STORIES.forEach((story, idx) => {
+                html += `<button class="btn btn-small" onclick="selectPhilosopher(${idx})" style="display:block;width:100%;margin:8px 0;">📜 ${story.philosopher} (${story.questions.length} perguntas)</button>`;
+            });
+            html += '</div>';
+            showModal("📜 HISTÓRIA FILOSÓFICA", html, () => {});
+        }
+
+        function selectPhilosopher(idx) {
+            currentPhilosophyStory = PHILOSOPHY_STORIES[idx];
+            currentPhilosophyQuestionIdx = 0;
+            showPhilosophyQuestion();
+        }
+
+        function showPhilosophyQuestion() {
+            if (currentPhilosophyQuestionIdx >= currentPhilosophyStory.questions.length) {
+                const totalQuestions = currentPhilosophyStory.questions.length;
+                showModal("🎉 PARABÉNS!",
+                    `Você concluiu a jornada com ${currentPhilosophyStory.philosopher}!<br>Sabedoria adquirida: +${totalQuestions * 10}`,
+                    () => {
+                        currentPhilosophyStory = null;
+                    });
+                return;
+            }
+            const q = currentPhilosophyStory.questions[currentPhilosophyQuestionIdx];
+            let html = `<p style="font-size:1.1rem;margin-bottom:15px;"><b>${currentPhilosophyStory.philosopher}:</b> ${currentPhilosophyStory.intro}</p>`;
+            html += `<p style="font-size:1rem;margin-bottom:15px;">${q.q}</p>`;
+            html += q.opts.map((opt, i) =>
+                `<button class="btn btn-small" onclick="answerPhilosophyQuestion(${i})" style="display:block;width:100%;margin:6px 0;">${opt}</button>`
+            ).join('');
+            showModal(`📜 ${currentPhilosophyStory.philosopher}`, html, () => {});
+        }
+
+        function answerPhilosophyQuestion(idx) {
+            const q = currentPhilosophyStory.questions[currentPhilosophyQuestionIdx];
+            if (idx === q.c) {
+                AudioFX.play('correct');
+                document.getElementById('modalText').innerHTML += `<p style="color:#5eff6e;margin-top:10px;">✅ Correto! ${q.feedback}</p>`;
+            } else {
+                AudioFX.play('wrong');
+                document.getElementById('modalText').innerHTML += `<p style="color:#ff5e5e;margin-top:10px;">❌ Errado. ${q.feedback}</p>`;
+            }
+            document.getElementById('modalBtn').onclick = () => {
+                currentPhilosophyQuestionIdx++;
+                showPhilosophyQuestion();
+            };
+            document.getElementById('modalBtn').innerHTML = 'Próxima';
+        }
+
+        // Eventos do menu
+        document.getElementById('startBtn').onclick = () => {
+            document.querySelector('.menu-content').innerHTML = `
+            <h2 style="font-size:1.6rem;">ESCOLHA SUA FILOSOFIA</h2>
+            <div style="display:grid;gap:16px;grid-template-columns:1fr 1fr 1fr;margin-top:22px;">
+                ${CLASSES.map(c=>`
+                <div style="background:rgba(0,0,0,0.8);padding:14px;border-radius:24px;cursor:pointer;border:2px solid #d4af37;" onclick="startNewGame('${c.id}')">
+                    <div style="font-size:1.6rem;">${c.name}</div>
+                    <div style="font-size:0.75rem;">❤️${c.stats.hp} 💙${c.stats.mp} ⚔️${c.stats.atk} 🛡️${c.stats.def}</div>
+                    <div style="font-size:0.7rem;color:#ffcc88;">${c.skills.map(s=>s.name).join(' • ')}</div>
+                </div>`).join('')}
+            </div>`;
+        };
+        document.getElementById('storyBtn').onclick = () => showModal("📜 A JORNADA",
+            "Em um mundo pixelado de ideias, você combate falsos filósofos.<br><br>Cada pergunta certa ilumina sua mente e faz seu personagem <b>crescer</b> enquanto o inimigo <b>diminui</b>.<br><br>Explore a <b>História Filosófica</b> para aprender mais sobre os grandes pensadores!",
+            () => {});
+        document.getElementById('philosophyStoryBtn').onclick = startPhilosophyStory;
+
+        window.startNewGame = startNewGame;
+        window.useSkill = useSkill;
+        window.checkAnswer = checkAnswer;
+        window.openInventory = openInventory;
+        window.startPhilosophyStory = startPhilosophyStory;
+        window.selectPhilosopher = selectPhilosopher;
+        window.answerPhilosophyQuestion = answerPhilosophyQuestion;
+
+        setTimeout(() => document.getElementById('loading').classList.add('hidden'), 700);
+    </script>
+</body>
+</html>

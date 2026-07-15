@@ -1,0 +1,2041 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Almas Sombrias - RPG Filosófico</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Roboto+Condensed:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            font-family: 'Roboto Condensed', sans-serif;
+            overflow: hidden;
+            background: #000;
+            color: #fff;
+        }
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+        .ui-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .ui-overlay>* {
+            pointer-events: auto;
+        }
+        .hud {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            display: grid;
+            grid-template-columns: 320px 1fr 280px;
+            gap: 12px;
+            font-family: 'Cinzel', serif;
+            text-shadow: 0 2px 3px black;
+            z-index: 20;
+        }
+        @media (max-width:900px) {
+            .hud {
+                grid-template-columns: 1fr;
+                gap: 8px;
+                top: 8px;
+                left: 8px;
+                right: 8px;
+            }
+        }
+        .hud-panel {
+            background: rgba(0, 0, 0, 0.78);
+            backdrop-filter: blur(8px);
+            border-radius: 18px;
+            padding: 10px 14px;
+            border: 2px solid #a88c4c;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+        }
+        .player-name {
+            font-size: 1.3rem;
+            font-weight: 900;
+            color: #f5e7a0;
+            margin-bottom: 6px;
+            display: flex;
+            gap: 8px;
+            align-items: baseline;
+            flex-wrap: wrap;
+        }
+        .stat-bar {
+            margin-bottom: 8px;
+        }
+        .stat-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.65rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #ddc;
+            margin-bottom: 2px;
+        }
+        .bar {
+            height: 12px;
+            background: #222;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid #aa8c54;
+        }
+        .bar-fill {
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 20px;
+        }
+        .hp-fill {
+            background: linear-gradient(90deg, #bd2f2f, #e65c4f);
+        }
+        .mp-fill {
+            background: linear-gradient(90deg, #2c6ebb, #4a9eff);
+        }
+        .xp-fill {
+            background: linear-gradient(90deg, #e0a82b, #f5c542);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            margin-top: 8px;
+            font-size: 0.7rem;
+        }
+        .stat-cell {
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+            padding: 3px 5px;
+            text-align: center;
+            font-weight: bold;
+            border-left: 2px solid #ffcc66;
+        }
+        .enemy-name {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: #ffaa88;
+            text-shadow: 0 0 5px #ff6644;
+            text-align: center;
+            margin-bottom: 4px;
+        }
+        .combo-counter {
+            margin-top: 6px;
+            font-size: 0.85rem;
+            display: inline-block;
+            background: #000000aa;
+            padding: 2px 10px;
+            border-radius: 30px;
+            color: #ffcc77;
+            font-weight: bold;
+        }
+        #timeIndicator {
+            font-size: 0.65rem;
+            background: #00000099;
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 20px;
+            margin-top: 4px;
+        }
+        .combat-ui {
+            position: absolute;
+            bottom: 20px;
+            left: 55%;
+            transform: translateX(-50%);
+            width: 85%;
+            max-width: 1000px;
+            z-index: 20;
+        }
+        .question-box {
+            background: rgba(0, 0, 0, 0.88);
+            backdrop-filter: blur(14px);
+            border-radius: 28px;
+            padding: 16px 20px;
+            border: 2px solid #d4aa44;
+            box-shadow: 0 8px 22px black;
+        }
+        .question-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 16px;
+            font-family: 'Cinzel';
+            color: #f5e2b0;
+        }
+        .answers {
+            display: grid;
+            gap: 10px;
+        }
+        .answer-btn {
+            background: #111c2c;
+            border: 2px solid #aa8c54;
+            padding: 10px 18px;
+            border-radius: 50px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: #f5efd0;
+            cursor: pointer;
+            transition: 0.2s;
+            text-align: left;
+        }
+        .answer-btn:hover {
+            transform: translateX(8px);
+            background: #2a4a6e;
+            border-color: #ffdd99;
+            box-shadow: 0 0 10px #ffbb33;
+        }
+        .answer-btn.correct {
+            background: #1f6e2e;
+            border-color: #aaffaa;
+            animation: pulseGreen 0.4s;
+        }
+        .answer-btn.wrong {
+            background: #a11f2f;
+            border-color: #ff8888;
+            animation: shake 0.4s;
+        }
+        @keyframes pulseGreen {
+            0% {
+                box-shadow: 0 0 0 0 #2ecc71;
+            }
+            100% {
+                box-shadow: 0 0 0 12px rgba(46, 204, 113, 0);
+            }
+        }
+        @keyframes shake {
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+            25% {
+                transform: translateX(-6px);
+            }
+            75% {
+                transform: translateX(6px);
+            }
+        }
+        .skills-bar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 14px;
+        }
+        .skill-btn {
+            background: #3d2a4e;
+            border: 1px solid #b88a5a;
+            padding: 7px 18px;
+            border-radius: 40px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            color: #fff0c0;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: 'Cinzel';
+        }
+        .skill-btn:hover:not(:disabled) {
+            transform: translateY(-3px);
+            background: #734c8c;
+            box-shadow: 0 5px 12px black;
+        }
+        .skill-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .menu-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, #0a0518, #000000);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .menu-content {
+            text-align: center;
+            max-width: 820px;
+            padding: 28px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 50px;
+            border: 2px solid #c9a03d;
+        }
+        .game-title {
+            font-size: 3.8rem;
+            font-family: 'Cinzel';
+            font-weight: 900;
+            background: linear-gradient(135deg, #FFD966, #FF9F4A);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 20px rgba(255, 200, 0, 0.6);
+        }
+        .btn {
+            background: linear-gradient(145deg, #2a2542, #16122b);
+            border: 2px solid #d4af37;
+            color: #ffefcf;
+            padding: 10px 36px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            margin: 10px;
+            font-family: 'Cinzel';
+            transition: 0.2s;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+            background: #3d3670;
+            box-shadow: 0 0 16px #eebb55;
+        }
+        .btn-small {
+            padding: 6px 16px;
+            font-size: 0.8rem;
+            margin: 4px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.88);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: #1c1736;
+            max-width: 650px;
+            width: 90%;
+            border-radius: 40px;
+            padding: 26px;
+            border: 3px solid #e8b45a;
+            text-align: center;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        .modal-title {
+            font-size: 1.8rem;
+            font-family: 'Cinzel';
+            margin-bottom: 12px;
+            color: #ffd58c;
+        }
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin: 15px 0;
+            max-height: 320px;
+            overflow-y: auto;
+            padding: 4px;
+        }
+        .inv-slot {
+            background: linear-gradient(145deg, #2a2542, #1a1635);
+            border: 2px solid #c9a03d;
+            border-radius: 20px;
+            padding: 12px 5px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+        }
+        .inv-slot:hover {
+            transform: translateY(-5px);
+            border-color: #ffdd99;
+            box-shadow: 0 8px 20px rgba(255, 200, 0, 0.3);
+            background: linear-gradient(145deg, #3d3670, #2a2542);
+        }
+        .item-name {
+            font-weight: bold;
+            font-size: 0.8rem;
+            color: #ffefcf;
+        }
+        .item-desc {
+            font-size: 0.6rem;
+            color: #d4c58a;
+            margin-top: 4px;
+        }
+        .shop-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(90deg, #0f0a1e, #1a1535);
+            margin: 12px 0;
+            padding: 12px 16px;
+            border-radius: 40px;
+            border: 1px solid #a88c4c;
+            transition: 0.2s;
+        }
+        .shop-row:hover {
+            border-color: #ffcc66;
+            box-shadow: 0 0 12px rgba(255, 204, 102, 0.3);
+            transform: scale(1.01);
+        }
+        .shop-btn {
+            background: linear-gradient(145deg, #d4af37, #b8922a);
+            border: none;
+            padding: 6px 20px;
+            border-radius: 40px;
+            font-weight: bold;
+            color: #1a1220;
+            cursor: pointer;
+            font-family: 'Cinzel';
+            transition: 0.2s;
+        }
+        .shop-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 12px #ffd966;
+        }
+        .close-custom {
+            background: #2a2542;
+            border: 1px solid #a88c4c;
+            color: #ffefcf;
+            margin-top: 16px;
+        }
+        .floating-text {
+            position: fixed;
+            font-size: 2.5rem;
+            font-weight: 900;
+            z-index: 3000;
+            pointer-events: none;
+            animation: floatHit 1s forwards;
+            text-shadow: 0 0 12px;
+        }
+        .damage {
+            color: #ff5e5e;
+        }
+        .heal {
+            color: #5eff6e;
+        }
+        .critical {
+            color: #ffcc44;
+            font-size: 3.5rem;
+        }
+        @keyframes floatHit {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(0.7);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-90px) scale(1.2);
+            }
+        }
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 5000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .hidden {
+            display: none;
+        }
+        .spinner {
+            width: 55px;
+            height: 55px;
+            border: 5px solid #eebb5540;
+            border-top: 5px solid #d4af37;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        .gameover-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 4000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+            pointer-events: none;
+            backdrop-filter: blur(8px);
+        }
+        .gameover-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .gameover-card {
+            background: linear-gradient(145deg, #1a0f0f, #0a0505);
+            border: 3px solid #b33a3a;
+            border-radius: 60px;
+            padding: 40px 50px;
+            text-align: center;
+            max-width: 550px;
+            width: 85%;
+            box-shadow: 0 0 60px rgba(180, 40, 40, 0.6);
+            animation: fadeInUp 0.6s ease-out;
+        }
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .gameover-icon {
+            font-size: 5rem;
+            margin-bottom: 15px;
+            color: #ff5e5e;
+            text-shadow: 0 0 20px #ff0000;
+        }
+        .gameover-title {
+            font-size: 3rem;
+            font-family: 'Cinzel';
+            color: #ff8866;
+            text-shadow: 0 0 15px #ff3300;
+            margin-bottom: 20px;
+        }
+        .gameover-stats {
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 40px;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 1.1rem;
+            border: 1px solid #a88c4c;
+        }
+        .gameover-stats p {
+            margin: 8px 0;
+        }
+        .gameover-btn {
+            background: #7a2e2e;
+            border: 2px solid #ffaa66;
+            color: #fff0d0;
+            padding: 12px 28px;
+            font-size: 1.2rem;
+            margin: 8px;
+            border-radius: 60px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: bold;
+        }
+        .gameover-btn:hover {
+            transform: scale(1.05);
+            background: #a23a3a;
+            box-shadow: 0 0 20px #ff6644;
+        }
+        .victory-final-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 4000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+            pointer-events: none;
+            backdrop-filter: blur(8px);
+        }
+        .victory-final-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .victory-final-card {
+            background: linear-gradient(145deg, #0f1a0f, #050a05);
+            border: 3px solid #b3b33a;
+            border-radius: 60px;
+            padding: 40px 50px;
+            text-align: center;
+            max-width: 600px;
+            width: 85%;
+            box-shadow: 0 0 60px rgba(180, 180, 40, 0.6);
+            animation: fadeInUp 0.6s ease-out;
+        }
+        .victory-icon {
+            font-size: 5rem;
+            margin-bottom: 15px;
+            color: #ffd700;
+            text-shadow: 0 0 20px #ffd700;
+        }
+        .victory-title {
+            font-size: 3rem;
+            font-family: 'Cinzel';
+            color: #ffd700;
+            text-shadow: 0 0 15px #ffaa00;
+            margin-bottom: 20px;
+        }
+        .victory-stats {
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 40px;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 1.1rem;
+            border: 1px solid #a88c4c;
+        }
+        .victory-stats p {
+            margin: 8px 0;
+        }
+        .victory-btn {
+            background: #2e6a2e;
+            border: 2px solid #66ffaa;
+            color: #d0fff0;
+            padding: 12px 28px;
+            font-size: 1.2rem;
+            margin: 8px;
+            border-radius: 60px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: bold;
+        }
+        .victory-btn:hover {
+            transform: scale(1.05);
+            background: #3a8a3a;
+            box-shadow: 0 0 20px #44ff66;
+        }
+        .tutorial-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.92);
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(6px);
+        }
+        .tutorial-overlay.hidden {
+            display: none;
+        }
+        .tutorial-card {
+            background: linear-gradient(145deg, #1a1736, #0a0818);
+            border: 3px solid #d4af37;
+            border-radius: 40px;
+            padding: 30px 35px;
+            max-width: 650px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            text-align: left;
+        }
+        .tutorial-card h2 {
+            color: #ffd58c;
+            font-family: 'Cinzel';
+            font-size: 1.8rem;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .tutorial-card h3 {
+            color: #e8b45a;
+            margin-top: 12px;
+            font-size: 1.1rem;
+        }
+        .tutorial-card p {
+            color: #d4c58a;
+            margin: 6px 0 6px 15px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .tutorial-card .highlight {
+            color: #ffcc66;
+            font-weight: bold;
+        }
+        .tutorial-card .btn {
+            display: block;
+            margin: 20px auto 0;
+        }
+        @media (max-width:1024px) {
+            .hud {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            .combat-ui {
+                width: 96%;
+                bottom: 8px;
+            }
+            .question-text {
+                font-size: 1rem;
+            }
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (max-width:768px) {
+            body {
+                font-size: 14px;
+            }
+            .hud {
+                grid-template-columns: 1fr;
+                top: 5px;
+                left: 5px;
+                right: 5px;
+                gap: 6px;
+            }
+            .hud-panel {
+                padding: 8px;
+            }
+            .player-name {
+                font-size: 1rem;
+            }
+            .enemy-name {
+                font-size: 1.1rem;
+            }
+            .combat-ui {
+                width: 98%;
+                bottom: 5px;
+            }
+            .question-box {
+                padding: 12px;
+                border-radius: 18px;
+            }
+            .question-text {
+                font-size: 0.9rem;
+                margin-bottom: 12px;
+            }
+            .answer-btn {
+                font-size: 0.8rem;
+                padding: 10px 12px;
+                border-radius: 18px;
+            }
+            .skills-bar {
+                gap: 6px;
+            }
+            .skill-btn {
+                font-size: 0.7rem;
+                padding: 7px 10px;
+            }
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 4px;
+            }
+            .game-title {
+                font-size: 2rem;
+            }
+            .menu-content {
+                border-radius: 24px;
+            }
+        }
+        @media (max-width:480px) {
+            .question-text {
+                font-size: 0.8rem;
+            }
+            .answer-btn {
+                font-size: 0.75rem;
+                padding: 9px 10px;
+            }
+            .player-name,
+            .enemy-name {
+                font-size: 0.9rem;
+            }
+            .stat-label {
+                font-size: 0.55rem;
+            }
+            .bar {
+                height: 8px;
+            }
+            .btn {
+                width: 100%;
+                margin: 6px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <div class="loading" id="loading"><div class="spinner"></div></div>
+
+    <div class="menu-screen" id="menuScreen">
+        <div class="menu-content">
+            <h1 class="game-title">Almas Sombrias</h1>
+            <p style="font-size:1.2rem; margin-bottom:25px; color:#dcc27a;">RPG Filosófico • Modelos 3D Locais</p>
+            <button class="btn" id="startBtn">INICIAR JORNADA</button>
+            <button class="btn" id="storyBtn">SABEDORIA</button>
+            <button class="btn" id="philosophyStoryBtn">HISTÓRIA FILOSÓFICA</button>
+        </div>
+    </div>
+
+    <div class="tutorial-overlay" id="tutorialOverlay">
+        <div class="tutorial-card">
+            <h2> TUTORIAL</h2>
+            <h3> Combate</h3>
+            <p>• Responda perguntas filosóficas para atacar o inimigo.</p>
+            <p>• <span class="highlight">Respostas corretas</span> causam dano e aumentam seu combo.</p>
+            <p>• <span class="highlight">Respostas erradas</span> reduzem seu combo e bônus.</p>
+            <h3> Atributos</h3>
+            <p>• <span class="highlight">VIDA:</span> Sua saúde. Se chegar a 0, a jornada acaba.</p>
+            <p>• <span class="highlight">MANA:</span> Usada para habilidades especiais.</p>
+            <p>• <span class="highlight">SORTE:</span> Chance de acertar mesmo errando.</p>
+            <p>• <span class="highlight">INSIGHT:</span> Bônus de dano acumulado com acertos consecutivos.</p>
+            <h3> Loja & Inventário</h3>
+            <p>• Compre poções e amuletos com ouro ganho em batalhas.</p>
+            <p>• Use itens clicando no inventário.</p>
+            <h3> Progressão</h3>
+            <p>• Derrote inimigos para ganhar XP e subir de nível.</p>
+            <p>• Cada nível aumenta seus atributos permanentemente.</p>
+            <p>• <span class="highlight">Limite máximo: Nível 20</span> — ao atingir, você vence o jogo!</p>
+            <button class="btn" id="closeTutorialBtn">ENTENDI! VAMOS JOGAR</button>
+        </div>
+    </div>
+
+    <div class="ui-overlay" id="uiOverlay" style="display:none;">
+        <div class="hud">
+            <div class="hud-panel">
+                <div class="player-name"><span id="playerName">Sábio</span> <span id="playerLevel">Nv.1</span></div>
+                <div class="stat-bar"><div class="stat-label"><span>VIDA</span><span id="hpText">100/100</span></div><div class="bar"><div id="hpBar" class="bar-fill hp-fill"></div></div></div>
+                <div class="stat-bar"><div class="stat-label"><span>MANA</span><span id="mpText">50/50</span></div><div class="bar"><div id="mpBar" class="bar-fill mp-fill"></div></div></div>
+                <div class="stat-bar"><div class="stat-label"><span>XP</span><span id="xpText">0/100</span></div><div class="bar"><div id="xpBar" class="bar-fill xp-fill"></div></div></div>
+                <div class="stats-grid">
+                    <div class="stat-cell">ATK <span id="attack">10</span></div>
+                    <div class="stat-cell">DEF <span id="defense">5</span></div>
+                    <div class="stat-cell">SORTE <span id="luck">10</span>%</div>
+                    <div class="stat-cell">OURO <span id="gold">150</span></div>
+                    <div class="stat-cell">VITÓRIAS <span id="victories">0</span></div>
+                    <div class="stat-cell">SABEDORIA <span id="wisdom">0</span></div>
+                </div>
+                <div style="margin-top:6px;font-size:0.7rem;">Troféus: <span id="trophyCount">0</span></div>
+                <button class="btn btn-small" onclick="openInventory()">INVENTÁRIO</button>
+                <button class="btn btn-small" onclick="openShop()">LOJA</button>
+            </div>
+            <div class="hud-panel enemy-card">
+                <div class="enemy-name" id="enemyName">???</div>
+                <div class="stat-bar"><div class="stat-label"><span>VIDA</span><span id="enemyHpText">0/0</span></div><div class="bar"><div id="enemyHpBar" class="bar-fill hp-fill"></div></div></div>
+                <div class="combo-counter">COMBO: <span id="comboValue">0</span>x INSIGHT: <span id="insightBonus">+0%</span></div>
+                <div id="timeIndicator"> DIA</div>
+                <div style="font-size:0.65rem;margin-top:4px;color:#ffaa88;" id="enemyTypeTag"></div>
+            </div>
+            <div class="hud-panel">
+                <div style="font-weight:bold;">LORE</div>
+                <div id="storyLore" style="font-size:0.7rem;">"Conhece-te a ti mesmo - cada batalha ensina uma lição."</div>
+            </div>
+        </div>
+        <div class="combat-ui" id="combatUI" style="display:none;">
+            <div class="question-box">
+                <div class="question-text" id="questionText">Carregando...</div>
+                <div class="answers" id="answersBox"></div>
+            </div>
+            <div class="skills-bar" id="skillsPanel"></div>
+        </div>
+    </div>
+
+    <div id="modal" class="modal"><div class="modal-content"><h2 class="modal-title" id="modalTitle"></h2><p class="modal-text" id="modalText"></p><button class="btn" id="modalBtn">Continuar</button></div></div>
+    <div id="gameoverOverlay" class="gameover-overlay"><div class="gameover-card"><div class="gameover-icon">💀</div><div class="gameover-title">FIM DA JORNADA</div><div class="gameover-stats" id="gameoverStats"><p>Nível alcançado: <span id="goLevel">0</span></p><p>Inimigos derrotados: <span id="goVictories">0</span></p><p>Sabedoria acumulada: <span id="goWisdom">0</span></p><p>Maior Insight: <span id="goInsight">0</span>%</p></div><button class="gameover-btn" id="restartBtn">RECOMEÇAR JORNADA</button><button class="gameover-btn" id="menuBtn">VOLTAR AO INÍCIO</button></div></div>
+    <div id="victoryFinalOverlay" class="victory-final-overlay"><div class="victory-final-card"><div class="victory-icon">🏆</div><div class="victory-title">VITÓRIA FINAL!</div><div class="victory-stats" id="victoryStats"><p>Nível final: <span id="vfLevel">20</span></p><p>Inimigos derrotados: <span id="vfVictories">0</span></p><p>Sabedoria acumulada: <span id="vfWisdom">0</span></p><p>Troféus: <span id="vfTrophies">0</span></p></div><button class="victory-btn" id="victoryMenuBtn">VOLTAR AO INÍCIO</button></div></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js">
+    </script>
+
+    <script>
+        const MODEL_URLS = {
+            player: "glb models/luisa.glb",
+            enemy: "glb models/model.glb",
+            boss: "./models/meu_modelo_boss.glb"
+        };
+
+        const AudioFX = {
+            ctx: null,
+            init() { this.ctx = new(window.AudioContext || webkitAudioContext)(); },
+            play(type) {
+                if (!this.ctx) this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                let freq = 300,
+                    dur = 0.15,
+                    wave = 'sine';
+                switch (type) {
+                    case 'hit':
+                        freq = 160;
+                        wave = 'sawtooth';
+                        dur = 0.2;
+                        break;
+                    case 'correct':
+                        freq = 660;
+                        dur = 0.35;
+                        break;
+                    case 'wrong':
+                        freq = 190;
+                        wave = 'square';
+                        dur = 0.25;
+                        break;
+                    case 'level':
+                        freq = 920;
+                        dur = 0.55;
+                        break;
+                    case 'skill':
+                        freq = 750;
+                        wave = 'triangle';
+                        dur = 0.3;
+                        break;
+                    case 'gameover':
+                        freq = 120;
+                        wave = 'sawtooth';
+                        dur = 1.2;
+                        break;
+                    case 'victory':
+                        freq = 880;
+                        dur = 0.8;
+                        break;
+                }
+                osc.type = wave;
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + dur);
+                osc.start();
+                osc.stop(this.ctx.currentTime + dur);
+            }
+        };
+
+        const MASTER_QUESTIONS = [
+            { q: "O que significa 'Maiêutica'?", a: ["Parto das ideias (Sócrates)", "Teoria das Formas", "Método científico",
+                    "Lógica formal"
+                ], c: 0, exp: "Sócrates fazia perguntas para 'dar à luz' o conhecimento." },
+            { q: "Quem escreveu 'A República' e a Alegoria da Caverna?", a: ["Platão", "Aristóteles", "Sócrates",
+                    "Cícero"
+                ], c: 0, exp: "Platão mostra o caminho da ignorância à verdade." },
+            { q: "Imperativo Categórico de Kant?", a: ["Aja como lei universal", "Busca pela felicidade", "Vontade divina",
+                    "Dúvida metódica"
+                ], c: 0, exp: "Age de tal modo que tua ação possa tornar-se lei universal." },
+            { q: "Para Nietzsche, o Super-Homem é:", a: ["Criador de valores", "Ditador", "Herói mítico", "Iluminado"],
+                c: 0, exp: "Transcende a moral escrava e cria novos valores." },
+            { q: "Contrato Social de Rousseau:", a: ["Vontade geral", "Estado de natureza", "Leviatã",
+                    "Monarquia absoluta"
+                ], c: 0, exp: "A soberania pertence ao povo unido em contrato social." },
+            { q: "Dúvida Metódica de Descartes busca:", a: ["Verdade indubitável", "Ceticismo radical", "Relativismo",
+                    "Empirismo puro"
+                ], c: 0, exp: "'Penso, logo existo' é a base." },
+            { q: "O que é a 'Dialética' para Hegel?", a: ["Tese, antítese, síntese", "Argumentação retórica",
+                    "Método indutivo", "Contradição estática"
+                ], c: 0, exp: "Movimento do espírito através da contradição." },
+            { q: "Quem é o pai do Existencialismo moderno?", a: ["Kierkegaard", "Sartre", "Heidegger", "Camus"], c: 0,
+                exp: "Kierkegaard fundou o existencialismo com sua angústia da escolha." },
+            { q: "O 'Útil' para o Utilitarismo de Bentham:", a: ["Maior felicidade geral", "Dever moral", "Virtude",
+                    "Contemplação"
+                ], c: 0, exp: "A ação correta maximiza a felicidade do maior número." },
+            { q: "A 'Vontade de Potência' em Nietzsche:", a: ["Força criadora da vida", "Desejo de poder político",
+                    "Dominação bélica", "Ascetismo"
+                ], c: 0, exp: "É a força vital que impulsiona a superação." },
+            { q: "Para Aristóteles, a felicidade plena é:", a: ["Eudaimonia", "Hedonê", "Ataraxia", "Prazer"], c: 0,
+                exp: "Eudaimonia é a realização através da virtude." },
+            { q: "Quem disse 'O homem é a medida de todas as coisas'?", a: ["Protágoras", "Platão", "Sócrates",
+                    "Pitágoras"
+                ], c: 0, exp: "Protágoras, sofista relativista." },
+            { q: "O conceito de 'Amor Fati' significa:", a: ["Amar o destino", "Ódio ao destino", "Fuga do destino",
+                    "Controle total"
+                ], c: 0, exp: "Nietzsche propunha aceitar e amar cada momento." },
+            { q: "Qual filósofo escreveu 'Ética a Nicômaco'?", a: ["Aristóteles", "Platão", "Sêneca", "Epicuro"], c: 0,
+                exp: "Obra fundamental da ética aristotélica." },
+            { q: "O que é o 'Véu da Ignorância' de Rawls?", a: ["Justiça sem privilégios", "Desconhecimento total",
+                    "Ceticismo", "Mito"
+                ], c: 0, exp: "Princípio de justiça por trás de um véu que esconde nossas posições sociais." },
+            { q: "Quem fundou a Academia?", a: ["Platão", "Aristóteles", "Sócrates", "Zenão"], c: 0,
+                exp: "Platão fundou a Academia em Atenas." },
+            { q: "Para Epicuro, o prazer é:", a: ["Ausência de dor", "Busca exagerada", "Virtude apenas", "Devoção"],
+                c: 0, exp: "Ataraxia e aponia: prazer como ausência de sofrimento." },
+            { q: "O 'Imperativo Hipotético' em Kant:", a: ["Ação condicionada a um fim", "Dever incondicional",
+                    "Lei natural", "Máxima da natureza"
+                ], c: 0, exp: "É um comando condicional: se queres X, deves fazer Y." },
+            { q: "Quem escreveu 'O Mundo como Vontade e Representação'?", a: ["Schopenhauer", "Hegel", "Kant", "Fichte"],
+                c: 0, exp: "Schopenhauer via a vontade como essência do mundo." },
+            { q: "O que é o 'Eterno Retorno' para Nietzsche?", a: ["Viver como se tudo se repetisse", "Ciclo cósmico",
+                    "Reencarnação", "Imortalidade"
+                ], c: 0, exp: "Teste existencial: viveria sua vida da mesma forma?" },
+            { q: "Qual a principal obra de Maquiavel?", a: ["O Príncipe", "Utopia", "A Cidade do Sol", "Leviatã"], c: 0,
+                exp: "Maquiavel analisa o poder e a política realista." },
+            { q: "Quem escreveu 'Utopia'?", a: ["Thomas More", "Francis Bacon", "John Locke", "Voltaire"], c: 0,
+                exp: "More descreveu uma ilha idealizada." },
+            { q: "Qual filósofo defendia o 'Estado de Natureza' como guerra de todos contra todos?", a: ["Hobbes",
+                    "Locke", "Rousseau", "Montesquieu"
+                ], c: 0,
+                exp: "Hobbes via a vida natural como solitária, pobre, sórdida, brutal e curta." },
+            { q: "Quem é conhecido como o 'Filósofo do Absurdo'?", a: ["Albert Camus", "Jean-Paul Sartre",
+                    "Simone de Beauvoir", "Maurice Merleau-Ponty"
+                ], c: 0, exp: "Camus explorou o sentido da vida diante do absurdo." },
+            { q: "O que é 'Mais-Valia' para Marx?", a: ["Trabalho não pago", "Lucro justo", "Mais dinheiro", "Imposto"],
+                c: 0, exp: "Mais-valia é a diferença entre valor produzido e salário." },
+            { q: "Qual pensador escreveu 'A Fenomenologia do Espírito'?", a: ["Hegel", "Kant", "Fichte", "Schelling"],
+                c: 0, exp: "Hegel descreve o desenvolvimento da consciência." },
+            { q: "Quem cunhou o termo 'Plus Ultra' associado ao saber?", a: ["Nietzsche", "Bacon", "Descartes",
+                    "Galileu"
+                ], c: 0, exp: "Bacon incentivava a superação dos limites do conhecimento." },
+            { q: "O que é o 'Noumenon' em Kant?", a: ["Coisa em si", "Fenômeno", "Intuição", "Categoria"], c: 0,
+                exp: "A realidade independente da percepção." },
+            { q: "Qual filósofo estoico escreveu 'Meditações'?", a: ["Marco Aurélio", "Sêneca", "Epicteto", "Cícero"],
+                c: 0, exp: "Marco Aurélio, imperador romano estoico." },
+            { q: "Quem disse 'O inferno são os outros'?", a: ["Sartre", "Camus", "Kierkegaard", "Heidegger"], c: 0,
+                exp: "Sartre em 'Entre Quatro Paredes'." }
+        ];
+        let availableQuestions = [];
+
+        function resetQuestionPool() { availableQuestions = MASTER_QUESTIONS.map(q => ({ ...q })); }
+
+        function shuffleAnswers(question) {
+            const answers = [...question.a];
+            const correctAnswerText = answers[question.c];
+            for (let i = answers.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [answers[i], answers[j]] = [answers[j], answers[i]];
+            }
+            const newCorrectIndex = answers.findIndex(ans => ans === correctAnswerText);
+            return { shuffledAnswers: answers, newCorrectIndex };
+        }
+
+        const CLASSES = [
+            { id: "stoic", name: "ESTOICO", stats: { hp: 160, mp: 50, atk: 12, def: 14, luck: 12 }, color: 0x5a8fbc,
+                skills: [{ name: "Ataraxia", cost: 18, effect: "heal", power: 60 }, { name: "Muralha Estoica",
+                    cost: 22, effect: "defense", power: 15
+                }] },
+            { id: "dialectic", name: "DIALÉTICO", stats: { hp: 125, mp: 85, atk: 18, def: 7, luck: 16 }, color: 0xb87bcb,
+                skills: [{ name: "Síntese", cost: 28, effect: "damage", power: 75 }, { name: "Tese/Antítese", cost: 32,
+                    effect: "multi", power: 40
+                }] },
+            { id: "existentialist", name: "EXISTENCIALISTA", stats: { hp: 138, mp: 75, atk: 16, def: 9, luck: 22 },
+                color: 0xe89b3e, skills: [{ name: "Angústia Criativa", cost: 30, effect: "critical", power: 110 },
+                    { name: "Liberdade Radical", cost: 25, effect: "heal", power: 55 }
+                ] }
+        ];
+        const ENEMIES = [
+            { name: "Sofista", hp: 70, atk: 12, color: 0xc44545, xp: 45, gold: 35, lore: "Retórica vazia engana os tolos." },
+            { name: "Cético Radical", hp: 90, atk: 15, color: 0x4aa3c2, xp: 70, gold: 50,
+                lore: "Duvida até da própria dúvida." },
+            { name: "Dogmático", hp: 110, atk: 18, color: 0xe67e22, xp: 95, gold: 70,
+            lore: "Cego por verdades absolutas." },
+            { name: "Epicurista", hp: 85, atk: 14, color: 0x5bc48a, xp: 60, gold: 45,
+                lore: "Busca o prazer moderado, mas foge da dor." },
+            { name: "Cínico", hp: 100, atk: 16, color: 0x9e8b6e, xp: 80, gold: 30,
+            lore: "Despreza convenções sociais." }
+        ];
+        const BOSSES = [
+            { name: "PLATÃO", hp: 320, atk: 26, color: 0x9b6da0, xp: 450, gold: 400, isBoss: true,
+                lore: "Liberte-se da caverna!" },
+            { name: "NIETZSCHE", hp: 480, atk: 34, color: 0x9e3a2c, xp: 800, gold: 700, isBoss: true,
+                lore: "Se encarar o abismo, ele te encara." }
+        ];
+
+        let game = {
+            player: null,
+            enemy: null,
+            scene: null,
+            camera: null,
+            renderer: null,
+            playerModel: null,
+            enemyModel: null,
+            sunLight: null,
+            ambientLight: null,
+            clouds: [],
+            vegetation: [],
+            insightStacks: 0,
+            effects: []
+        };
+        let inventory = { items: [] };
+        let trophies = [];
+        let currentQuestionShuffled = null;
+        let maxLevel = 20;
+
+        function addItem(name, type, value, desc) { inventory.items.push({ name, type, value, desc }); }
+
+        function useItem(idx) {
+            const item = inventory.items[idx];
+            if (!item) return;
+            if (item.type === "heal") {
+                game.player.hp = Math.min(game.player.maxHp, game.player.hp + item.value);
+                showFloatingText(`+${item.value}`, "heal");
+                inventory.items.splice(idx, 1);
+                updateUI();
+            } else if (item.type === "mana") {
+                game.player.mp = Math.min(game.player.maxMp, game.player.mp + item.value);
+                showFloatingText(`+${item.value}`, "heal");
+                inventory.items.splice(idx, 1);
+                updateUI();
+            } else if (item.type === "buff_luck") {
+                game.player.luck += item.value;
+                showFloatingText(`Sorte +${item.value}%`, "heal");
+                inventory.items.splice(idx, 1);
+                updateUI();
+            }
+            renderInventoryModal();
+        }
+
+        function openInventory() { renderInventoryModal(); }
+
+        function renderInventoryModal() {
+            let html = `<div class="inventory-grid">`;
+            inventory.items.forEach((item, i) => {
+                html +=
+                    `<div class="inv-slot" onclick="useItem(${i})"><div class="item-name">${item.name}</div><div class="item-desc">${item.desc}</div></div>`;
+            });
+            if (inventory.items.length === 0) html +=
+                `<div class="inv-slot" style="grid-column:span 4;">Inventário vazio</div>`;
+            html += `</div><button class="btn btn-small close-custom" onclick="closeModal()">Fechar</button>`;
+            showModal("INVENTÁRIO", html, () => {});
+        }
+        let shopModalOpen = false;
+
+        function openShop() { shopModalOpen = true;
+            renderShop(); }
+
+        function renderShop() {
+            const shopHtml =
+                `<div><h3 style="color:#ffd966;">Empório Filosófico</h3>
+                <div class="shop-row"><span>Poção de Vida (55 HP)</span><span>40 ouro</span><button class="shop-btn" onclick="buyItem('heal',40,55,'Poção de Vida','Cura 55 HP')">Comprar</button></div>
+                <div class="shop-row"><span>Elixir de Mana (40 MP)</span><span>35 ouro</span><button class="shop-btn" onclick="buyItem('mana',35,40,'Elixir de Mana','Recupera 40 MP')">Comprar</button></div>
+                <div class="shop-row"><span>Amuleto da Sorte (+5% Sorte)</span><span>80 ouro</span><button class="shop-btn" onclick="buyItem('buff_luck',80,5,'Amuleto da Sorte','Aumenta sorte permanentemente')">Comprar</button></div>
+                <div class="shop-row"><span>Poção de Vida Superior (+90 HP)</span><span>75 ouro</span><button class="shop-btn" onclick="buyItem('heal',75,90,'Poção Vida Superior','Cura 90 HP')">Comprar</button></div>
+                <button class="btn-small close-custom" onclick="closeShop()">Fechar</button></div>`;
+            showModal("LOJA", shopHtml, () => {});
+        }
+
+        function closeShop() { shopModalOpen = false;
+            closeModal(); }
+
+        function buyItem(type, cost, val, name, desc) {
+            if (game.player.gold >= cost) {
+                game.player.gold -= cost;
+                addItem(name, type, val, desc);
+                updateUI();
+                renderShop();
+                showFloatingText(`Comprou ${name}!`, "heal");
+            } else showFloatingText("Ouro insuficiente!", "damage");
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+            if (shopModalOpen) shopModalOpen = false;
+        }
+
+        function checkTrophies() {
+            let newTrophy = false;
+            if (game.player.victories >= 5 && !trophies.includes("PRIMEIRA SABEDORIA")) { trophies.push(
+                    "PRIMEIRA SABEDORIA");
+                newTrophy = true; }
+            if (game.player.victories >= 10 && !trophies.includes("FILÓSOFO JOVEM")) { trophies.push("FILÓSOFO JOVEM");
+                newTrophy = true; }
+            if (game.player.level >= 5 && !trophies.includes("MESTRE DO PENSAMENTO")) { trophies.push(
+                    "MESTRE DO PENSAMENTO");
+                newTrophy = true; }
+            if (game.player.wisdom >= 100 && !trophies.includes("SÁBIO ANCESTRAL")) { trophies.push("SÁBIO ANCESTRAL");
+                newTrophy = true; }
+            if (game.player.level >= 20 && !trophies.includes("LENDA VIVA")) { trophies.push("LENDA VIVA");
+                newTrophy = true; }
+            document.getElementById('trophyCount').innerHTML = trophies.length;
+            if (newTrophy) showModal("NOVO TROFÉU!", `Você desbloqueou: ${trophies[trophies.length - 1]}`, () => {});
+        }
+
+        function getTerrainHeight(x, z) { return Math.sin(x * 0.12) * 0.3 + Math.cos(z * 0.12) * 0.3 + Math.sin(x * z * 0.02) *
+            0.1; }
+
+        function createDarkMountain(x, z) {
+            const group = new THREE.Group();
+            const baseH = getTerrainHeight(x, z);
+            const rockMat = new THREE.MeshStandardMaterial({ color: 0x3a3028, roughness: 0.85 });
+            const snowMat = new THREE.MeshStandardMaterial({ color: 0xcdddee });
+            const height = 2.2 + Math.random() * 1.8;
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.4, height, 7), rockMat);
+            body.position.y = baseH + height / 2;
+            body.castShadow = true;
+            group.add(body);
+            const peak = new THREE.Mesh(new THREE.ConeGeometry(0.9, 1.2, 6), snowMat);
+            peak.position.y = baseH + height - 0.2;
+            peak.castShadow = true;
+            group.add(peak);
+            group.position.set(x, 0, z);
+            return group;
+        }
+
+        function createTree(x, z) {
+            const group = new THREE.Group();
+            const yBase = getTerrainHeight(x, z);
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.38, 0.9, 6), new THREE.MeshStandardMaterial({
+                color: 0x7c5e3a }));
+            trunk.position.y = 0.45;
+            trunk.castShadow = true;
+            group.add(trunk);
+            const leafMat = new THREE.MeshStandardMaterial({ color: 0x4a7a2e });
+            const top1 = new THREE.Mesh(new THREE.ConeGeometry(0.6, 0.9, 8), leafMat);
+            top1.position.y = 0.9;
+            group.add(top1);
+            const top2 = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.7, 8), leafMat);
+            top2.position.y = 1.35;
+            group.add(top2);
+            group.position.set(x, yBase, z);
+            return group;
+        }
+
+        function createBush(x, z) {
+            const group = new THREE.Group();
+            const yBase = getTerrainHeight(x, z);
+            const leafMat = new THREE.MeshStandardMaterial({ color: 0x5a8a3a });
+            const center = new THREE.Mesh(new THREE.SphereGeometry(0.32, 5), leafMat);
+            center.position.y = 0.2;
+            group.add(center);
+            group.position.set(x, yBase, z);
+            return group;
+        }
+
+        function addVegetation() {
+            if (game.vegetation.length) game.vegetation.forEach(v => game.scene.remove(v));
+            game.vegetation = [];
+            for (let i = 0; i < 120; i++) { let x = (Math.random() - 0.5) * 70,
+                    z = (Math.random() - 0.5) * 70; if (Math.hypot(x, z) < 6) continue;
+                const tree = createTree(x, z);
+                game.scene.add(tree);
+                game.vegetation.push(tree); }
+            for (let i = 0; i < 180; i++) { let x = (Math.random() - 0.5) * 72,
+                    z = (Math.random() - 0.5) * 72; if (Math.hypot(x, z) < 5) continue;
+                const bush = createBush(x, z);
+                game.scene.add(bush);
+                game.vegetation.push(bush); }
+            const mountainPos = [
+                [-34, -28],
+                [32, -30],
+                [-30, 34],
+                [36, 32],
+                [0, 42],
+                [-42, 0],
+                [44, 0],
+                [20, -40],
+                [-20, 40],
+                [-45, -35],
+                [45, 38]
+            ];
+            mountainPos.forEach(pos => { const m = createDarkMountain(pos[0], pos[1]);
+                game.scene.add(m);
+                game.vegetation.push(m); });
+        }
+
+        function createPhilosopherModel(color, scale = 1.0) {
+            const group = new THREE.Group();
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x8a7a6a, roughness: 0.9 });
+            const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.2, 8), baseMat);
+            base.position.y = 0.1;
+            base.castShadow = true;
+            group.add(base);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.7, emissive: new THREE.Color(color)
+                    .multiplyScalar(0.1) });
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 0.7, 8), bodyMat);
+            body.position.y = 0.45;
+            body.castShadow = true;
+            group.add(body);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xf0d8b0, roughness: 0.6 });
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), headMat);
+            head.position.y = 0.85;
+            head.castShadow = true;
+            group.add(head);
+            const hairMat = new THREE.MeshStandardMaterial({ color: 0x4a3a2a, roughness: 0.8 });
+            const hair = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), hairMat);
+            hair.position.y = 0.88;
+            hair.scale.set(1, 0.5, 1);
+            hair.castShadow = true;
+            group.add(hair);
+            const beard = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), hairMat);
+            beard.position.set(0, 0.75, 0.18);
+            beard.scale.set(0.8, 0.5, 0.6);
+            beard.castShadow = true;
+            group.add(beard);
+            const eyeMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+            const eye1 = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), eyeMat);
+            eye1.position.set(-0.08, 0.87, 0.18);
+            group.add(eye1);
+            const eye2 = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), eyeMat);
+            eye2.position.set(0.08, 0.87, 0.18);
+            group.add(eye2);
+            const bookMat = new THREE.MeshStandardMaterial({ color: 0x6a3a1a, roughness: 0.8 });
+            const book = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.08, 0.15), bookMat);
+            book.position.set(0.3, 0.5, 0.2);
+            book.rotation.z = -0.2;
+            book.rotation.x = 0.3;
+            book.castShadow = true;
+            group.add(book);
+            const pageMat = new THREE.MeshStandardMaterial({ color: 0xf5e8c8 });
+            const page = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.02, 0.13), pageMat);
+            page.position.set(0.3, 0.52, 0.2);
+            page.rotation.z = -0.2;
+            page.rotation.x = 0.3;
+            group.add(page);
+            group.scale.set(scale, scale, scale);
+            return group;
+        }
+
+        function createEnemyModel(color, scale = 1.0) {
+            const group = new THREE.Group();
+            const glowMat = new THREE.MeshStandardMaterial({ color: color, emissive: new THREE.Color(color).multiplyScalar(
+                    0.3), transparent: true, opacity: 0.3 });
+            const aura = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.7, 0.1, 8), glowMat);
+            aura.position.y = 0.05;
+            group.add(aura);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(color).multiplyScalar(0.6),
+                roughness: 0.7, emissive: new THREE.Color(color).multiplyScalar(0.05) });
+            const body = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 0.65, 8), bodyMat);
+            body.position.y = 0.4;
+            body.castShadow = true;
+            group.add(body);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xd4c0a8, roughness: 0.6 });
+            const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), headMat);
+            head.position.y = 0.78;
+            head.castShadow = true;
+            group.add(head);
+            const hoodMat = new THREE.MeshStandardMaterial({ color: 0x1a1a2a, roughness: 0.9 });
+            const hood = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), hoodMat);
+            hood.position.y = 0.8;
+            hood.scale.set(1.1, 0.6, 1.1);
+            hood.castShadow = true;
+            group.add(hood);
+            const redEyeMat = new THREE.MeshStandardMaterial({ color: 0xff2200, emissive: 0xff2200 });
+            const eye1 = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 6), redEyeMat);
+            eye1.position.set(-0.07, 0.8, 0.17);
+            group.add(eye1);
+            const eye2 = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 6), redEyeMat);
+            eye2.position.set(0.07, 0.8, 0.17);
+            group.add(eye2);
+            group.scale.set(scale, scale, scale);
+            return group;
+        }
+
+        function createBossModel(color, scale = 1.3) {
+            const group = createEnemyModel(color, scale);
+            const laurelMat = new THREE.MeshStandardMaterial({ color: 0xccaa33, emissive: 0x996622,
+            emissiveIntensity: 0.3 });
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.06, 4, 4), laurelMat);
+                leaf.position.set(Math.cos(angle) * 0.22, 0.88 + Math.sin(angle) * 0.04, Math.sin(angle) * 0.22);
+                leaf.scale.set(1, 0.3, 1);
+                group.add(leaf);
+            }
+            const glowGroup = new THREE.Group();
+            const glowMat = new THREE.MeshStandardMaterial({ color: color, emissive: color, transparent: true,
+            opacity: 0.15 });
+            const glow = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 8), glowMat);
+            glow.position.y = 0.5;
+            glowGroup.add(glow);
+            group.add(glowGroup);
+            return group;
+        }
+
+        const loader = new THREE.GLTFLoader();
+        let modelsLoaded = { player: null, enemy: null, boss: null };
+
+        function loadModel(url, type, callback) {
+            if (!url) { console.warn(`URL do modelo ${type} não definida. Usando fallback.`);
+                callback(null); return; }
+            loader.load(url,
+                (gltf) => {
+                    console.log(`Modelo ${type} carregado com sucesso!`);
+                    const model = gltf.scene;
+                    model.scale.set(1.2, 1.2, 1.2);
+                    model.traverse((child) => { if (child.isMesh) { child.castShadow = true;
+                            child.receiveShadow = true; } });
+                    callback(model);
+                },
+                undefined,
+                (error) => { console.error(`Erro ao carregar modelo ${type}:`, error);
+                    callback(null); }
+            );
+        }
+
+        function loadAllModels(callback) {
+            let loaded = 0;
+            const total = 3;
+            const checkDone = () => { loaded++; if (loaded >= total) callback(); };
+            loadModel(MODEL_URLS.player, 'player', (model) => { modelsLoaded.player = model;
+                checkDone(); });
+            loadModel(MODEL_URLS.enemy, 'enemy', (model) => { modelsLoaded.enemy = model;
+                checkDone(); });
+            loadModel(MODEL_URLS.boss, 'boss', (model) => { modelsLoaded.boss = model;
+                checkDone(); });
+        }
+
+        function initWorld() {
+            const container = document.getElementById('canvas-container');
+            game.scene = new THREE.Scene();
+            game.scene.background = new THREE.Color(0x0a1a3a);
+            game.scene.fog = new THREE.FogExp2(0x0a1a3a, 0.005);
+            game.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 500);
+            game.camera.position.set(0, 5.2, 14);
+            game.renderer = new THREE.WebGLRenderer({ antialias: true });
+            game.renderer.setSize(window.innerWidth, window.innerHeight);
+            game.renderer.shadowMap.enabled = true;
+            game.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            game.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            game.renderer.toneMappingExposure = 1.8;
+            container.appendChild(game.renderer.domElement);
+
+            game.ambientLight = new THREE.AmbientLight(0x7080a0, 0.6);
+            game.scene.add(game.ambientLight);
+            game.sunLight = new THREE.DirectionalLight(0xffeedd, 1.5);
+            game.sunLight.position.set(12, 18, 5);
+            game.sunLight.castShadow = true;
+            game.sunLight.shadow.mapSize.width = 2048;
+            game.sunLight.shadow.mapSize.height = 2048;
+            game.scene.add(game.sunLight);
+            const fillLight = new THREE.DirectionalLight(0x4488ff, 0.6);
+            fillLight.position.set(-10, 5, -5);
+            game.scene.add(fillLight);
+            const backLight = new THREE.DirectionalLight(0xff8844, 0.4);
+            backLight.position.set(0, 2, -15);
+            game.scene.add(backLight);
+            const pointLight = new THREE.PointLight(0xffaa44, 0.5, 20);
+            pointLight.position.set(0, 6, 0);
+            game.scene.add(pointLight);
+
+            const geometry = new THREE.PlaneGeometry(140, 140, 160, 160);
+            geometry.rotateX(-Math.PI / 2);
+            const positions = geometry.attributes.position.array;
+            for (let i = 0; i < positions.length; i += 3) positions[i + 1] = getTerrainHeight(positions[i], positions[i +
+                2]);
+            geometry.computeVertexNormals();
+            const ground = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: 0x4a6a3a, roughness: 0.85 }));
+            ground.receiveShadow = true;
+            game.scene.add(ground);
+            addVegetation();
+
+            const cloudMat = new THREE.MeshStandardMaterial({ color: 0xeef4ff, emissive: 0x88aaff, transparent: true,
+                opacity: 0.6 });
+            game.clouds = [];
+            for (let i = 0; i < 40; i++) {
+                const cloud = new THREE.Group();
+                for (let p = 0; p < 5; p++) {
+                    const part = new THREE.Mesh(new THREE.SphereGeometry(0.5, 5, 5), cloudMat);
+                    part.scale.set(0.8 + Math.random() * 0.8, 0.5, 0.7);
+                    part.position.set((Math.random() - 0.5) * 1.5, (Math.random() - 0.5) * 0.4, (Math.random() - 0.5) *
+                        1.2);
+                    cloud.add(part);
+                }
+                cloud.position.set((Math.random() - 0.5) * 70, 8 + Math.random() * 7, (Math.random() - 0.5) * 60);
+                cloud.userData = { speed: 0.006 + Math.random() * 0.012 };
+                game.scene.add(cloud);
+                game.clouds.push(cloud);
+            }
+            animate();
+        }
+
+        function createSlashEffect(x, y, z, angle, color) {
+            const group = new THREE.Group();
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'rgba(0,0,0,0)';
+            ctx.fillRect(0, 0, 128, 128);
+            ctx.beginPath();
+            ctx.arc(64, 64, 50, -Math.PI / 4, Math.PI / 4);
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 8;
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(64, 64, 45, -Math.PI / 4, Math.PI / 4);
+            ctx.strokeStyle = '#ffdd44';
+            ctx.lineWidth = 5;
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(64, 64, 55, -Math.PI / 4, Math.PI / 4);
+            ctx.strokeStyle = '#ffaa00';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.SpriteMaterial({ map: texture, blending: THREE.AdditiveBlending, depthTest: false,
+                depthWrite: false, transparent: true, opacity: 1 });
+            const sprite = new THREE.Sprite(material);
+            sprite.scale.set(3.5, 3.5, 1);
+            sprite.position.set(x, y, z);
+            sprite.rotation.z = angle;
+            group.add(sprite);
+
+            const particles = [];
+            for (let i = 0; i < 20; i++) {
+                const geo = new THREE.SphereGeometry(0.06, 4, 4);
+                const mat = new THREE.MeshBasicMaterial({ color: 0xffcc44, transparent: true, opacity: 1 });
+                const particle = new THREE.Mesh(geo, mat);
+                particle.position.set(x, y, z);
+                const speed = 0.08 + Math.random() * 0.12;
+                particle.userData = {
+                    vx: (Math.random() - 0.5) * speed,
+                    vy: (Math.random() - 0.5) * speed,
+                    vz: (Math.random() - 0.5) * speed,
+                    life: 0.5 + Math.random() * 0.4
+                };
+                group.add(particle);
+                particles.push(particle);
+            }
+            group.userData = { life: 0.4, particles: particles, sprite: sprite };
+            game.scene.add(group);
+            game.effects.push(group);
+        }
+
+        function createExplosionEffect(x, y, z, color) {
+            const group = new THREE.Group();
+            const coreGeo = new THREE.SphereGeometry(0.3, 8, 8);
+            const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1, blending: THREE
+                    .AdditiveBlending, depthTest: false, depthWrite: false });
+            const core = new THREE.Mesh(coreGeo, coreMat);
+            core.position.set(x, y, z);
+            group.add(core);
+
+            const particles = [];
+            for (let i = 0; i < 40; i++) {
+                const geo = new THREE.SphereGeometry(0.08 + Math.random() * 0.1, 4, 4);
+                const mat = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 1, blending: THREE
+                        .AdditiveBlending, depthTest: false, depthWrite: false });
+                const particle = new THREE.Mesh(geo, mat);
+                particle.position.set(x, y, z);
+                const angle = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                const speed = 0.1 + Math.random() * 0.2;
+                particle.userData = {
+                    vx: Math.sin(phi) * Math.cos(angle) * speed,
+                    vy: Math.sin(phi) * Math.sin(angle) * speed,
+                    vz: Math.cos(phi) * speed,
+                    life: 0.6 + Math.random() * 0.5
+                };
+                group.add(particle);
+                particles.push(particle);
+            }
+            group.userData = { life: 0.5, particles: particles, core: core };
+            game.scene.add(group);
+            game.effects.push(group);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = Date.now() * 0.000025;
+            const angle = time % (Math.PI * 2);
+            if (game.sunLight) {
+                const intensity = Math.max(0.45, (Math.sin(angle) + 1) / 1.55);
+                game.sunLight.intensity = intensity;
+                game.ambientLight.intensity = 0.4 + intensity * 0.4;
+                game.sunLight.position.x = Math.cos(angle) * 18;
+                game.sunLight.position.y = Math.sin(angle) * 12 + 6;
+                const skyLight = 0.15 + intensity * 0.25;
+                game.scene.background = new THREE.Color().setHSL(0.55, 0.6, skyLight);
+                const indicator = document.getElementById('timeIndicator');
+                if (indicator) indicator.innerHTML = intensity > 0.7 ? ' DIA' : (intensity > 0.5 ? ' ENTARDECER' :
+                    ' NOITE');
+            }
+            game.clouds.forEach(c => { c.position.x += c.userData.speed; if (c.position.x > 75) c.position.x = -75; });
+
+            if (game.playerModel) {
+                game.playerModel.position.y = 1.5 + Math.sin(Date.now() * 0.0015) * 0.06;
+                game.playerModel.rotation.y += 0.002;
+            }
+            if (game.enemyModel) {
+                game.enemyModel.position.y = 1.5 + Math.sin(Date.now() * 0.0015 + 2) * 0.07;
+                game.enemyModel.rotation.y -= 0.002;
+            }
+
+            for (let i = game.effects.length - 1; i >= 0; i--) {
+                const eff = game.effects[i];
+                eff.userData.life -= 0.016;
+                if (eff.userData.life <= 0) {
+                    game.scene.remove(eff);
+                    game.effects.splice(i, 1);
+                    continue;
+                }
+                if (eff.userData.particles) {
+                    eff.userData.particles.forEach(p => {
+                        p.position.x += p.userData.vx;
+                        p.position.y += p.userData.vy;
+                        p.position.z += p.userData.vz;
+                        p.material.opacity = Math.max(0, p.userData.life / 1.0);
+                        p.scale.multiplyScalar(0.98);
+                    });
+                }
+                if (eff.userData.core) {
+                    eff.userData.core.scale.multiplyScalar(0.96);
+                    eff.userData.core.material.opacity = Math.max(0, eff.userData.life / 0.5);
+                }
+                if (eff.userData.sprite) {
+                    eff.userData.sprite.material.opacity = Math.max(0, eff.userData.life / 0.4);
+                    eff.userData.sprite.scale.multiplyScalar(1.02);
+                }
+            }
+
+            game.camera.position.x += (0 - game.camera.position.x) * 0.03;
+            game.camera.lookAt(0, 2.5, 0);
+            game.renderer.render(game.scene, game.camera);
+        }
+
+        function startNewGame(selectedClass) {
+            const cls = CLASSES.find(c => c.id === selectedClass);
+            game.player = {
+                name: cls.name,
+                maxHp: cls.stats.hp,
+                hp: cls.stats.hp,
+                maxMp: cls.stats.mp,
+                mp: cls.stats.mp,
+                atk: cls.stats.atk,
+                def: cls.stats.def,
+                luck: cls.stats.luck,
+                skills: cls.skills,
+                level: 1,
+                xp: 0,
+                xpToNext: 100,
+                gold: 150,
+                victories: 0,
+                wisdom: 0,
+                combo: 0,
+                insightBonus: 0,
+                atkBase: cls.stats.atk,
+                totalCorrectAnswers: 0,
+                totalEnemiesDefeated: 0,
+                color: cls.color
+            };
+            game.insightStacks = 0;
+            trophies = [];
+            inventory.items = [];
+            addItem("Poção de Vida", "heal", 55, "Cura 55 HP");
+            addItem("Elixir de Mana", "mana", 40, "Recupera 40 MP");
+            resetQuestionPool();
+            updateUI();
+            document.getElementById('menuScreen').style.display = 'none';
+            document.getElementById('uiOverlay').style.display = 'block';
+
+            if (!game.scene) initWorld();
+
+            loadAllModels(() => {
+                if (game.playerModel) game.scene.remove(game.playerModel);
+                if (modelsLoaded.player) {
+                    game.playerModel = modelsLoaded.player.clone();
+                    game.playerModel.scale.set(3, 3, 3);
+                } else {
+                    game.playerModel = createPhilosopherModel(cls.color, 1.0);
+                }
+                game.playerModel.position.set(-4.0, 1.5, 0);
+                game.scene.add(game.playerModel);
+                startBattle();
+            });
+        }
+
+        function startBattle() {
+            let enemyData;
+            const isBoss = (game.player.victories === 5 || game.player.victories === 10);
+            if (isBoss) enemyData = JSON.parse(JSON.stringify(BOSSES[game.player.victories === 5 ? 0 : 1]));
+            else enemyData = JSON.parse(JSON.stringify(ENEMIES[Math.floor(Math.random() * ENEMIES.length)]));
+            enemyData.maxHp = enemyData.hp;
+            game.enemy = enemyData;
+            document.getElementById('enemyTypeTag').innerHTML = game.enemy.isBoss ? ' BOSS ' : '';
+            game.player.combo = 0;
+
+            if (game.enemyModel) game.scene.remove(game.enemyModel);
+
+            let model;
+            if (game.enemy.isBoss && modelsLoaded.boss) {
+                model = modelsLoaded.boss.clone();
+                model.scale.set(1.5, 1.5, 1.5);
+            } else if (modelsLoaded.enemy) {
+                model = modelsLoaded.enemy.clone();
+                model.scale.set(1.5, 1.5, 1.5);
+            } else {
+                if (game.enemy.isBoss) { model = createBossModel(game.enemy.color, 1.2); } else { model =
+                        createEnemyModel(game.enemy.color, 1.0); }
+            }
+            game.enemyModel = model;
+            game.enemyModel.position.set(4.0, 1.5, 0);
+            game.scene.add(game.enemyModel);
+
+            updateEnemyUI();
+            askQuestion();
+            renderSkills();
+            document.getElementById('combatUI').style.display = 'block';
+            document.getElementById('insightBonus').innerHTML = `+${Math.floor(game.player.insightBonus * 100)}%`;
+        }
+
+        function askQuestion() {
+            if (availableQuestions.length === 0) { resetQuestionPool();
+                showModal("Fonte de Sabedoria", "As antigas perguntas foram reavivadas!", () => {}); }
+            const randomIndex = Math.floor(Math.random() * availableQuestions.length);
+            const originalQ = availableQuestions[randomIndex];
+            const { shuffledAnswers, newCorrectIndex } = shuffleAnswers(originalQ);
+            currentQuestionShuffled = { text: originalQ.q, answers: shuffledAnswers, correctIndex: newCorrectIndex,
+                explanation: originalQ.exp, originalIndex: randomIndex };
+            document.getElementById('questionText').innerHTML = currentQuestionShuffled.text;
+            document.getElementById('answersBox').innerHTML = currentQuestionShuffled.answers.map((ans, idx) =>
+                `<button class="answer-btn" onclick="checkAnswer(${idx}, ${currentQuestionShuffled.correctIndex}, '${currentQuestionShuffled.explanation.replace(/'/g, "\\'")}')">${ans}</button>`
+            ).join('');
+        }
+
+        window.checkAnswer = function(selected, correctIndexStored, explanation) {
+            const btns = document.querySelectorAll('.answer-btn');
+            btns.forEach((b, i) => { b.disabled = true; if (i === correctIndexStored) b.classList.add('correct'); if (i ===
+                    selected && i !== correctIndexStored) b.classList.add('wrong'); });
+            const isCorrect = (selected === correctIndexStored) || (Math.random() * 100 < game.player.luck + game.player
+                .insightBonus * 20);
+            if (isCorrect) {
+                AudioFX.play('correct');
+                game.player.combo++;
+                game.insightStacks++;
+                game.player.totalCorrectAnswers++;
+                if (game.insightStacks >= 3) { game.player.insightBonus = Math.min(0.5, game.player.insightBonus + 0.1);
+                    game.insightStacks = 0;
+                    showFloatingText("✨ INSIGHT!", 'heal'); }
+                const dmg = Math.floor(game.player.atk + game.player.combo * 3 + Math.random() * 14 + game.player
+                    .insightBonus * 15);
+                game.enemy.hp -= dmg;
+                showFloatingText(`-${dmg}`, 'damage');
+                game.player.wisdom += 5;
+                if (game.playerModel) {
+                    game.playerModel.position.x = -2.5;
+                    createSlashEffect(-2.5, 2.0, 0, 0.3, 0xffdd44);
+                    createExplosionEffect(2.5, 2.0, 0, 0xff8844);
+                    setTimeout(() => { if (game.playerModel) game.playerModel.position.x = -4.0; }, 250);
+                }
+                if (game.enemyModel) {
+                    game.enemyModel.position.x = 3.5;
+                    setTimeout(() => { if (game.enemyModel) game.enemyModel.position.x = 4.0; }, 250);
+                }
+                document.getElementById('wisdom').innerText = game.player.wisdom;
+                showModal(" ENSINAMENTO", explanation, () => {});
+                updateEnemyUI();
+                if (currentQuestionShuffled && currentQuestionShuffled.originalIndex !== undefined) availableQuestions
+                    .splice(currentQuestionShuffled.originalIndex, 1);
+                if (game.enemy.hp <= 0) setTimeout(() => victory(), 700);
+                else setTimeout(() => enemyTurn(), 1100);
+            } else {
+                AudioFX.play('wrong');
+                game.player.combo = 0;
+                game.insightStacks = 0;
+                game.player.insightBonus = Math.max(0, game.player.insightBonus - 0.05);
+                showFloatingText(" ERRO!", 'damage');
+                enemyTurn();
+            }
+            updateComboUI();
+            document.getElementById('insightBonus').innerHTML =
+                `+${Math.floor(game.player.insightBonus * 100)}%`;
+        };
+
+        function enemyTurn() {
+            let rawDmg = game.enemy.atk - game.player.def + Math.floor(Math.random() * 8);
+            let dmg = Math.max(8, Math.min(18, rawDmg));
+            if (game.enemy.isBoss) dmg = Math.min(26, Math.floor(dmg * 1.3));
+            game.player.hp -= dmg;
+            AudioFX.play('hit');
+            showFloatingText(`-${dmg}`, 'damage');
+            if (game.enemyModel) {
+                game.enemyModel.position.x = 3.5;
+                createSlashEffect(2.5, 2.0, 0, -0.3, 0xff4444);
+                createExplosionEffect(-2.5, 2.0, 0, 0xff4444);
+                setTimeout(() => { if (game.enemyModel) game.enemyModel.position.x = 4.0; }, 250);
+            }
+            if (game.playerModel) {
+                game.playerModel.position.x = -3.5;
+                setTimeout(() => { if (game.playerModel) game.playerModel.position.x = -4.0; }, 250);
+            }
+            updateUI();
+            if (game.player.hp <= 0) gameOver();
+            else setTimeout(() => askQuestion(), 1200);
+        }
+
+        function useSkill(idx) {
+            const skill = game.player.skills[idx];
+            if (game.player.mp < skill.cost) return;
+            game.player.mp -= skill.cost;
+            AudioFX.play('skill');
+            if (skill.effect === 'heal') {
+                game.player.hp = Math.min(game.player.maxHp, game.player.hp + skill.power);
+                showFloatingText(`+${skill.power}`, 'heal');
+                if (game.playerModel) {
+                    game.playerModel.position.y += 0.2;
+                    setTimeout(() => { if (game.playerModel) game.playerModel.position.y -= 0.2; }, 300);
+                }
+            } else if (skill.effect === 'damage') {
+                game.enemy.hp -= skill.power;
+                showFloatingText(`-${skill.power}`, 'critical');
+                createSlashEffect(2.5, 2.0, 0, 0.5, 0xffaa00);
+                createExplosionEffect(2.5, 2.0, 0, 0xffaa00);
+                if (game.enemyModel) {
+                    game.enemyModel.position.x = 3.2;
+                    setTimeout(() => { if (game.enemyModel) game.enemyModel.position.x = 4.0; }, 300);
+                }
+            } else if (skill.effect === 'defense') {
+                game.player.def += skill.power;
+                showFloatingText(` DEF+${skill.power}`, 'heal');
+                if (game.playerModel) {
+                    game.playerModel.scale.set(1.1, 1.1, 1.1);
+                    setTimeout(() => { if (game.playerModel) game.playerModel.scale.set(1, 1, 1); }, 500);
+                }
+            } else if (skill.effect === 'critical') {
+                const big = skill.power + Math.floor(Math.random() * 50);
+                game.enemy.hp -= big;
+                showFloatingText(` ${big}`, 'critical');
+                createSlashEffect(2.0, 2.2, 0, 0.8, 0xffff00);
+                createExplosionEffect(2.5, 2.0, 0, 0xff6600);
+                if (game.enemyModel) {
+                    game.enemyModel.position.x = 3.0;
+                    setTimeout(() => { if (game.enemyModel) game.enemyModel.position.x = 4.0; }, 400);
+                }
+            } else if (skill.effect === 'multi') {
+                for (let i = 0; i < 2; i++) setTimeout(() => {
+                    game.enemy.hp -= skill.power;
+                    showFloatingText(`-${skill.power}`, 'damage');
+                    createExplosionEffect(2.5, 2.0, 0, 0xff8844);
+                    updateEnemyUI();
+                }, i * 400);
+            }
+            updateUI();
+            updateEnemyUI();
+            if (game.enemy.hp <= 0) setTimeout(() => victory(), 800);
+            else setTimeout(() => enemyTurn(), 1400);
+            renderSkills();
+        }
+
+        function victory() {
+            game.player.xp += game.enemy.xp;
+            game.player.gold += game.enemy.gold;
+            game.player.victories++;
+            game.player.combo = 0;
+            game.player.totalEnemiesDefeated++;
+            AudioFX.play('level');
+            game.player.wisdom += 12;
+            const wisdomBuffs = Math.floor(game.player.wisdom / 50);
+            game.player.atk = game.player.atkBase + wisdomBuffs;
+            checkLevelUp();
+            checkTrophies();
+            updateUI();
+            game.player.hp = Math.min(game.player.maxHp, game.player.hp + 50);
+            game.player.mp = Math.min(game.player.maxMp, game.player.mp + 30);
+            if (game.player.level >= maxLevel) { victoryFinal(); return; }
+            showModal(" VITÓRIA!",
+                `Derrotou ${game.enemy.name}! +${game.enemy.xp} XP, +${game.enemy.gold} Ouro.<br>"${game.enemy.lore}"`, () => { startBattle
+                    (); });
+        }
+
+        function checkLevelUp() {
+            while (game.player.xp >= game.player.xpToNext && game.player.level < maxLevel) {
+                game.player.level++;
+                if (game.player.level >= maxLevel) { game.player.xp = game.player.xpToNext - 1; break; }
+                game.player.xp -= game.player.xpToNext;
+                game.player.xpToNext = Math.floor(game.player.xpToNext * 1.5);
+                game.player.maxHp += 30;
+                game.player.maxMp += 15;
+                game.player.atk += 5;
+                game.player.def += 4;
+                game.player.luck += 3;
+                game.player.atkBase += 5;
+                AudioFX.play('level');
+                showFloatingText("⬆ LEVEL UP!", 'heal');
+            }
+            if (game.player.hp > game.player.maxHp) game.player.hp = game.player.maxHp;
+            if (game.player.mp > game.player.maxMp) game.player.mp = game.player.maxMp;
+        }
+
+        function victoryFinal() {
+            document.getElementById('combatUI').style.display = 'none';
+            AudioFX.play('victory');
+            document.getElementById('vfLevel').innerText = game.player.level;
+            document.getElementById('vfVictories').innerText = game.player.victories;
+            document.getElementById('vfWisdom').innerText = game.player.wisdom;
+            document.getElementById('vfTrophies').innerText = trophies.length;
+            document.getElementById('victoryFinalOverlay').classList.add('active');
+        }
+
+        function goToMenuFromVictory() { location.reload(); }
+
+        function gameOver() {
+            document.getElementById('combatUI').style.display = 'none';
+            document.getElementById('goLevel').innerText = game.player.level;
+            document.getElementById('goVictories').innerText = game.player.victories;
+            document.getElementById('goWisdom').innerText = game.player.wisdom;
+            document.getElementById('goInsight').innerText = Math.floor(game.player.insightBonus * 100);
+            AudioFX.play('gameover');
+            document.getElementById('gameoverOverlay').classList.add('active');
+        }
+
+        function restartGame() { location.reload(); }
+
+        function backToMenu() { location.reload(); }
+
+        function updateUI() {
+            const p = game.player;
+            document.getElementById('playerName').innerHTML = p.name;
+            document.getElementById('playerLevel').innerHTML = `Nv.${p.level}/${maxLevel}`;
+            document.getElementById('hpText').innerHTML = `${Math.floor(p.hp)}/${p.maxHp}`;
+            document.getElementById('mpText').innerHTML = `${Math.floor(p.mp)}/${p.maxMp}`;
+            document.getElementById('xpText').innerHTML = `${p.xp}/${p.xpToNext}`;
+            document.getElementById('attack').innerHTML = p.atk;
+            document.getElementById('defense').innerHTML = p.def;
+            document.getElementById('luck').innerHTML = p.luck;
+            document.getElementById('gold').innerHTML = p.gold;
+            document.getElementById('victories').innerHTML = p.victories;
+            document.getElementById('wisdom').innerHTML = p.wisdom;
+            document.getElementById('hpBar').style.width = (p.hp / p.maxHp * 100) + '%';
+            document.getElementById('mpBar').style.width = (p.mp / p.maxMp * 100) + '%';
+            document.getElementById('xpBar').style.width = (p.xp / p.xpToNext * 100) + '%';
+            document.getElementById('trophyCount').innerHTML = trophies.length;
+        }
+
+        function updateEnemyUI() {
+            if (!game.enemy) return;
+            document.getElementById('enemyName').innerHTML = game.enemy.name;
+            document.getElementById('enemyHpText').innerHTML =
+                `${Math.max(0, Math.floor(game.enemy.hp))}/${game.enemy.maxHp}`;
+            document.getElementById('enemyHpBar').style.width = (game.enemy.hp / game.enemy.maxHp * 100) + '%';
+        }
+
+        function updateComboUI() { document.getElementById('comboValue').innerHTML = game.player.combo; }
+
+        function renderSkills() {
+            document.getElementById('skillsPanel').innerHTML = game.player.skills.map((s, i) =>
+                `<button class="skill-btn" onclick="useSkill(${i})" ${game.player.mp < s.cost ? 'disabled' : ''}>${s.name} (${s.cost})</button>`
+            ).join('');
+        }
+
+        function showFloatingText(text, type) {
+            const div = document.createElement('div');
+            div.className = `floating-text ${type}`;
+            div.innerText = text;
+            div.style.left = window.innerWidth / 2 - 70 + 'px';
+            div.style.top = window.innerHeight / 2 - 40 + 'px';
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 1100);
+        }
+
+        function showModal(title, text, callback) {
+            const modal = document.getElementById('modal');
+            document.getElementById('modalTitle').innerHTML = title;
+            document.getElementById('modalText').innerHTML = text;
+            modal.classList.add('active');
+            document.getElementById('modalBtn').onclick = () => { modal.classList.remove('active'); if (callback)
+            callback(); };
+        }
+
+        const PHILOSOPHY_STORIES = [
+            { philosopher: "Sócrates", intro: "Você encontra Sócrates na ágora de Atenas. Ele questiona:", questions: [
+                    { q: "O que é a virtude?", opts: ["Conhecimento", "Poder", "Riqueza", "Beleza"], c: 0,
+                        feedback: "Para Sócrates, a virtude é conhecimento." },
+                    { q: "Qual o método socrático?", opts: ["Maiêutica", "Dedução", "Indução", "Experimento"],
+                        c: 0, feedback: "A maiêutica é o parto das ideias." },
+                    { q: "Por que Sócrates dizia 'só sei que nada sei'?", opts: ["Reconhecimento da ignorância",
+                            "Modéstia", "Ceticismo radical", "Ironia"
+                        ], c: 0, feedback: "É o primeiro passo para a sabedoria." }
+                ] },
+            { philosopher: "Platão", intro: "Platão o convida para sua Academia:", questions: [
+                    { q: "O que é o Mundo das Ideias?", opts: ["Realidade perfeita e eterna", "Mundo físico",
+                            "Sonho coletivo", "Ilusão"
+                        ], c: 0, feedback: "As Ideias são a verdadeira realidade." },
+                    { q: "O que simboliza a caverna na Alegoria?", opts: ["A ignorância", "O conforto",
+                            "A natureza", "A arte"
+                        ], c: 0, feedback: "A caverna representa a prisão da ignorância." },
+                    { q: "Quem deve governar na cidade ideal de Platão?", opts: ["O rei-filósofo", "Os militares",
+                            "Os ricos", "Os sacerdotes"
+                        ], c: 0, feedback: "Apenas quem contempla o Bem pode governar." }
+                ] },
+            { philosopher: "Nietzsche", intro: "Das montanhas, Nietzsche proclama:", questions: [
+                    { q: "O que é o Super-Homem?", opts: ["Criador de valores", "Ditador", "Herói mítico",
+                            "Deus"
+                        ], c: 0, feedback: "Aquele que supera a moral tradicional e cria novos valores." },
+                    { q: "O que significa 'Deus está morto'?", opts: ["Fim dos valores absolutos", "Ateísmo",
+                            "Morte literal", "Niilismo passivo"
+                        ], c: 0, feedback: "As certezas metafísicas perderam o fundamento." },
+                    { q: "Qual o conceito do amor fati?", opts: ["Amar o destino", "Amor à vida",
+                            "Amor próprio", "Amor ao próximo"
+                        ], c: 0,
+                        feedback: "Amar o destino, inclusive o sofrimento, como parte da vida." }
+                ] }
+        ];
+        let currentStory = null,
+            currentStoryQuestionIdx = 0;
+
+        function startPhilosophyStory() { let html = '<div><h3> Filósofos</h3>';
+            PHILOSOPHY_STORIES.forEach((s, i) => { html +=
+                    `<button class="btn-small" onclick="selectPhilosopher(${i})" style="margin:6px;">${s.philosopher}</button>`
+                    ; });
+            html += '</div>';
+            showModal("SABEDORIA", html, () => {}); }
+
+        function selectPhilosopher(index) { currentStory = PHILOSOPHY_STORIES[index];
+            currentStoryQuestionIdx = 0;
+            showPhilosophyQuestion(); }
+
+        function showPhilosophyQuestion() { if (currentStoryQuestionIdx >= currentStory.questions.length) {
+                showModal("Parabéns!", "Sabedoria +15", () => { if (game.player) game.player.wisdom += 15;
+                    updateUI();
+                    currentStory = null; }); return; } const q = currentStory.questions[currentStoryQuestionIdx];
+            const html =
+                `<p><b>${currentStory.philosopher}</b>: ${currentStory.intro}</p><p>${q.q}</p>${q.opts.map((opt, i) => `<button class="btn-small" onclick="answerPhilosophy(${i})" style="margin:5px;">${opt}</button>`).join('')}`;
+            showModal("Questionamento", html, () => {}); }
+
+        function answerPhilosophy(selected) { const q = currentStory.questions[currentStoryQuestionIdx]; if (selected === q
+                .c) { showModal("Correto!", q.feedback, () => { currentStoryQuestionIdx++;
+                showPhilosophyQuestion(); }); } else { showModal("Reflita...", `Errado. ${q.feedback}`, () => {
+                currentStoryQuestionIdx++;
+                showPhilosophyQuestion(); }); } }
+
+        document.getElementById('startBtn').onclick = () => { document.getElementById('tutorialOverlay').classList.remove(
+                'hidden'); };
+        document.getElementById('closeTutorialBtn').onclick = () => {
+            document.getElementById('tutorialOverlay').classList.add('hidden');
+            document.querySelector('.menu-content').innerHTML = `
+                <h2 style="font-size:1.6rem;">Escolha sua Filosofia</h2>
+                <div style="display:grid;gap:16px;grid-template-columns:1fr 1fr 1fr;margin-top:22px;">
+                    ${CLASSES.map(c => `
+                        <div style="background:rgba(0,0,0,0.8);padding:14px;border-radius:24px;cursor:pointer;border:2px solid #d4af37;transition:all 0.3s;" onclick="startNewGame('${c.id}')" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                            <div style="font-size:1.6rem;">${c.name}</div>
+                            <div style="font-size:0.75rem;">${c.stats.hp} ${c.stats.mp} ${c.stats.atk} ${c.stats.def}</div>
+                            <div style="font-size:0.7rem;color:#ffcc88;">${c.skills.map(s => s.name).join(' • ')}</div>
+                        </div>
+                    `).join('')}
+                </div>
+                <p style="margin-top:15px;font-size:0.85rem;color:#dcc27a;">⬆ Limite: Nível 20 - Torne-se uma Lenda!</p>
+            `;
+        };
+        document.getElementById('storyBtn').onclick = () => showModal(" Jornada",
+            "Floresta das Ideias com montanhas escuras e picos sagrados. Acerte perguntas para crescer e derrotar inimigos. Cada pergunta correta é removida do banco, tornando cada batalha única! <br><br> <b>Objetivo:</b> Alcançar o Nível 20 e se tornar uma Lenda Viva!",
+            () => {});
+        document.getElementById('philosophyStoryBtn').onclick = startPhilosophyStory;
+        document.getElementById('restartBtn').onclick = restartGame;
+        document.getElementById('menuBtn').onclick = backToMenu;
+        document.getElementById('victoryMenuBtn').onclick = goToMenuFromVictory;
+
+        window.startNewGame = startNewGame;
+        window.useSkill = useSkill;
+        window.checkAnswer = window.checkAnswer;
+        window.openInventory = openInventory;
+        window.openShop = openShop;
+        window.buyItem = buyItem;
+        window.useItem = useItem;
+        window.closeModal = closeModal;
+        window.closeShop = closeShop;
+        window.selectPhilosopher = selectPhilosopher;
+        window.answerPhilosophy = answerPhilosophy;
+
+        setTimeout(() => document.getElementById('loading').classList.add('hidden'), 700);
+    </script>
+</body>
+</html>
